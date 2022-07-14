@@ -1,0 +1,51 @@
+version: '3.8'
+
+networks:
+  # Specify the network for bridging
+  crawl-network:
+    driver: bridge
+
+services:
+  backend:
+    build: ./backend
+    command: yarn run start
+    environment:
+      NODE_ENV: 'development'
+      ORBITER_SCENE: dashboard # dashboard: only dashboard | maker: only maker service | all
+      ORBITER_MAKER_PRIVATE_KEYS: '' # {"makerAddress":"private_key"}
+      PROMETHEUS_ALERTMANAGER: '{"api":"http://alertmanager:9093"}' # {"api":"http://alertmanager:9093"}
+      DB_HOST: db
+      DB_PORT: '${DB_PORT}'
+      DB_USER: '${DB_USER}'
+      DB_PASSWORD: '${DB_PASS}'
+      DB_NAME: '${DB_NAME}'
+    volumes:
+      - './backend/logs:/app/logs'
+    #   - './backend:/app'
+    ports:
+      - '3131:3131'
+    restart: always
+    networks:
+      - crawl-network
+
+  db:
+    image: mysql:5.7.16
+    # image: ibex/debian-mysql-server-5.7
+    # Set mysqld charset
+    command:
+      - '--character-set-server=utf8mb4'
+      - '--collation-server=utf8mb4_unicode_ci'
+    environment:
+      MYSQL_ROOT_PASSWORD: '${DB_ROOT_PASS}'
+      MYSQL_USER: '${DB_USER}'
+      MYSQL_PASSWORD: '${DB_PASS}'
+      MYSQL_DATABASE: '${DB_NAME}'
+      MYSQL_TCP_PORT: '${DB_PORT}'
+    volumes:
+      - './mysql/data:/var/lib/mysql'
+      - './mysql/conf.d:/etc/mysql/conf.d'
+    ports:
+      - '3030:3030'
+    restart: always
+    networks:
+      - crawl-network
