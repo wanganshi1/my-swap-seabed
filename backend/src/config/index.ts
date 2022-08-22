@@ -9,11 +9,9 @@ import networkConfig from './network'
 
 const appConfig = {
   options: <ListenOptions>{
-    port: process.env.APP_OPTIONS_PORT || 3011,
-    host: process.env.APP_OPTIONS_HOST || '0.0.0.0',
+    port: process.env.APP_OPTIONS_PORT || 3000,
+    host: process.env.APP_OPTIONS_HOST || '127.0.0.1',
   },
 }
 
-const privateKey = process.env.PRIVATE_KEY || ''
-
-export { appConfig, ormConfig, logConfig, networkConfig, privateKey }
+export { appConfig, ormConfig, logConfig, networkConfig }
