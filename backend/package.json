@@ -36,6 +36,7 @@
     "validator": "^13.7.0"
   },
   "devDependencies": {
+    "@types/bn.js": "^5.1.0",
     "@types/fs-extra": "^9.0.13",
     "@types/jest": "^27.0.3",
     "@types/koa": "^2.13.4",

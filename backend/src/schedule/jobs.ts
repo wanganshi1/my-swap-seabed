@@ -1,6 +1,8 @@
 import schedule from 'node-schedule'
+import { Provider } from 'starknet'
 import { networkConfig } from '../config'
 import { FaucetService } from '../service/faucet'
+import { PoolService } from '../service/pool'
 import { errorLogger } from '../util/logger'
 
 // import { doSms } from '../sms/smsSchinese'
@@ -83,5 +85,15 @@ export function jobFaucetTwitter() {
     new FaucetService().fromTwitter()
   }
 
-  new MJobPessimism('*/5 * * * * *', callback, jobFaucetTwitter.name).schedule()
+  // new MJobPessimism('*/5 * * * * *', callback, jobFaucetTwitter.name).schedule()
+}
+
+export function jobPoolCollect() {
+  const callback = async () => {
+    // Todo: network need from env
+    const provider = new Provider({ network: 'goerli-alpha' })
+    await new PoolService(provider).collect()
+  }
+
+  new MJobPessimism('*/10 * * * * *', callback, jobPoolCollect.name).schedule()
 }

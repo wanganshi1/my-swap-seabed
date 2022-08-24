@@ -16,7 +16,7 @@ type TwitterCrawl struct {
 	CreatedBy   uint
 	UpdatedBy   uint
 	PublishedAt sql.NullTime
-	CreatedAt   sql.NullTime
-	UpdatedAt   sql.NullTime
-	DeletedAt   sql.NullTime
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DeletedAt   time.Time
 }

@@ -12,11 +12,9 @@ export class TwitterCrawl extends CommonEntity {
   @Column('varchar', { length: 256 })
   username: number
 
-  @Column('timestamp', {
-    default: () => null,
-  })
+  @Column('timestamp', { default: null })
   timestamp: Date
 
-  @Column('varchar', { length: 256 })
+  @Column('text')
   text: string
 }

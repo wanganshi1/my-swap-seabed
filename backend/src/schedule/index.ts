@@ -1,8 +1,8 @@
-import { jobFaucetTwitter } from './jobs'
+import { jobFaucetTwitter, jobPoolCollect } from './jobs'
 
 export const startMasterJobs = async () => {
   jobFaucetTwitter()
+  jobPoolCollect()
 }
 
-export const startWorkerJobs = async () => {
-}
+export const startWorkerJobs = async () => {}
