@@ -17,13 +17,11 @@ services:
       DB_USER: '${DB_USER}'
       DB_PASSWORD: '${DB_PASS}'
       DB_NAME: '${DB_NAME}'
-      APP_OPTIONS_PORT: 3002
-      APP_OPTIONS_HOST: 0.0.0.0
     volumes:
       - './backend/logs:/app/logs'
     #   - './backend:/app'
     ports:
-      - '3002:3002'
+      - '3000:3000'
     restart: always
     networks:
       - l0k_swap-network
