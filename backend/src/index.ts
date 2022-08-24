@@ -61,10 +61,10 @@ const main = async () => {
     for (let index = 1; index <= reconnectTotal; index++) {
       try {
         // db bind
-        // Core.db = await createConnection(ormConfig.options)
-        // accessLogger.info(
-        //   `process: ${process.pid}. Connect to the database succeed!`
-        // )
+        Core.db = await createConnection(ormConfig.options)
+        accessLogger.info(
+          `process: ${process.pid}. Connect to the database succeed!`
+        )
 
         // memoryCache bind
         Core.memoryCache = new NodeCache()
