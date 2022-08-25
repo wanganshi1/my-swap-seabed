@@ -48,10 +48,13 @@ export class PoolService {
 
     const { totalSupply } = await contract.totalSupply()
     const { decimals } = await contract.decimals()
+    const { reserve0, reserve1 } = await contract.getReserves()
 
     return {
       totalSupply: toHex(uint256ToBN(totalSupply)),
       decimals: toBN(decimals).toNumber(),
+      reserve0: toBN(reserve0).toNumber(),
+      reserve1: toBN(reserve1).toNumber(),
     }
   }
 
@@ -97,8 +100,7 @@ export class PoolService {
         token0,
         token1,
         pairAddress: pairAddress,
-        totalSupply: pairInfo.totalSupply,
-        decimals: pairInfo.decimals,
+        ...pairInfo,
         APR: 2,
       })
     }
