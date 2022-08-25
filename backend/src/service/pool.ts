@@ -7,8 +7,8 @@ import { uint256ToBN } from 'starknet/dist/utils/uint256'
 import { contractConfig } from '../config'
 
 type Pair = {
-  token0: string
-  token1: string
+  token0: { address: string; name: string; symbol: string; decimals: number }
+  token1: { address: string; name: string; symbol: string; decimals: number }
   pairAddress: string
   totalSupply: string // hex
   decimals: number
@@ -36,6 +36,24 @@ export class PoolService {
       default:
         this.voyagerOrigin = 'https://goerli.voyager.online'
         break
+    }
+  }
+
+  private async getErc20Info(address: string) {
+    const contract = new Contract(
+      contractConfig.abis.erc20 as any,
+      address,
+      this.provider
+    )
+
+    const { name } = await contract.name()
+    const { symbol } = await contract.symbol()
+    const { decimals } = await contract.decimals()
+
+    return {
+      name: toBN(name).toBuffer().toString('utf-8'),
+      symbol: toBN(symbol).toBuffer().toString('utf-8'),
+      decimals: toBN(decimals).toNumber(),
     }
   }
 
@@ -94,11 +112,14 @@ export class PoolService {
       const token1 = number.toHex(toBN(eventResp.data.data[1]))
       const pairAddress = number.toHex(toBN(eventResp.data.data[2]))
 
+      const token0Info = await this.getErc20Info(token0)
+      const token1Info = await this.getErc20Info(token1)
+
       const pairInfo = await this.getPairInfo(pairAddress)
 
       _pairs.push({
-        token0,
-        token1,
+        token0: { address: token0, ...token0Info },
+        token1: { address: token1, ...token1Info },
         pairAddress: pairAddress,
         ...pairInfo,
         APR: 2,
