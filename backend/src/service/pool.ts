@@ -41,7 +41,7 @@ export class PoolService {
 
   private async getPairInfo(address: string) {
     const contract = new Contract(
-      contractConfig.abis.erc20 as any,
+      contractConfig.abis.l0kPair as any,
       address,
       this.provider
     )
