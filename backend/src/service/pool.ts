@@ -46,9 +46,9 @@ export class PoolService {
       this.provider
     )
 
-    const { totalSupply } = await contract.totalSupply({ max_fee: 1 })
-    const { decimals } = await contract.decimals({ max_fee: 1 })
-    const { reserve0, reserve1 } = await contract.getReserves({ max_fee: 1 })
+    const { totalSupply } = await contract.totalSupply()
+    const { decimals } = await contract.decimals()
+    const { reserve0, reserve1 } = await contract.getReserves()
 
     return {
       totalSupply: toHex(uint256ToBN(totalSupply)),
