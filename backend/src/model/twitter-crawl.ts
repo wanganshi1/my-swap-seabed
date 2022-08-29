@@ -6,6 +6,9 @@ export class TwitterCrawl extends CommonEntity {
   @PrimaryGeneratedColumn()
   id: number
 
+  @Column('int', { unique: true })
+  tweetId: number
+
   @Column('int')
   userId: number
 

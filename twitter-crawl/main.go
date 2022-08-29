@@ -30,6 +30,10 @@ func connectDB() (db *gorm.DB) {
 	return db
 }
 
+func scan() {
+
+}
+
 func main() {
 	err := godotenv.Load(fmt.Sprintf("..%c.env", os.PathSeparator))
 	if err != nil {
@@ -47,10 +51,12 @@ func main() {
 		}
 
 		fmt.Println("=============================")
-		fmt.Println(tweet.Timestamp)
-		fmt.Println(tweet.Text)
-		fmt.Println(tweet.UserID)
-		fmt.Println(tweet.Username)
+		fmt.Println("tweet.Timestamp", tweet.Timestamp)
+		fmt.Println("tweet.Text", tweet.Text)
+		fmt.Println("tweet.UserID", tweet.UserID)
+		fmt.Println("tweet.Username", tweet.Username)
+		fmt.Println("tweet.ID", tweet.ID)
+
 	}
 
 	time.Sleep(time.Second * 3)

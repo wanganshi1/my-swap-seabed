@@ -7,6 +7,7 @@ import (
 
 type TwitterCrawl struct {
 	Id        uint
+	TweetId   uint
 	UserId    uint
 	Username  uint
 	Timestamp time.Time
