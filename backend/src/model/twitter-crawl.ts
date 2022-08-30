@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm'
+import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm'
 import { CommonEntity } from './common'
 
 @Entity()
@@ -6,14 +6,14 @@ export class TwitterCrawl extends CommonEntity {
   @PrimaryGeneratedColumn()
   id: number
 
-  @Column('int', { unique: true })
-  tweetId: number
-
-  @Column('int')
-  userId: number
+  @Column('varchar', { length: 256, unique: true })
+  tweet_id: number
 
   @Column('varchar', { length: 256 })
-  username: number
+  user_id: number
+
+  @Column('varchar', { length: 256 })
+  username: string
 
   @Column('timestamp', { default: null })
   timestamp: Date

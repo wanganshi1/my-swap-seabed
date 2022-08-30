@@ -11,6 +11,7 @@ run/
 .nyc_output/
 dist/
 mysql*/
+nginx*/
 local.*
 .env
 .data/

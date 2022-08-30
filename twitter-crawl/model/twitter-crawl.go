@@ -7,9 +7,9 @@ import (
 
 type TwitterCrawl struct {
 	Id        uint
-	TweetId   uint
-	UserId    uint
-	Username  uint
+	TweetId   string
+	UserId    string
+	Username  string
 	Timestamp time.Time
 	Text      string
 
@@ -19,5 +19,9 @@ type TwitterCrawl struct {
 	PublishedAt sql.NullTime
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
-	DeletedAt   time.Time
+	DeletedAt   sql.NullTime
+}
+
+func (TwitterCrawl) TableName() string {
+	return "twitter_crawl"
 }

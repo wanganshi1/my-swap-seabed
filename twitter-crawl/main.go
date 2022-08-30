@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/0x60018/10k_swap-seabed/twitter-crawl/model"
 	"github.com/joho/godotenv"
 	twitterscraper "github.com/n0madic/twitter-scraper"
 	"gorm.io/driver/mysql"
@@ -18,10 +19,11 @@ func connectDB() (db *gorm.DB) {
 	DB_NAME := os.Getenv("DB_NAME")
 	DB_PORT := os.Getenv("DB_PORT")
 	DB_USER := os.Getenv("DB_USER")
-	DB_PASS := os.Getenv("DB_PASS")
+	DB_PASSWORD := os.Getenv("DB_PASSWORD")
 
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", DB_USER, DB_PASS, DB_HOST, DB_PORT, DB_NAME)
-	fmt.Println("dsn:", dsn)
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME)
+	log.Println("dsn:", dsn)
+
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatal(err.Error())
@@ -30,41 +32,55 @@ func connectDB() (db *gorm.DB) {
 	return db
 }
 
-func scan() {
+func scan(tweetQuery string) {
+	scraper := twitterscraper.New()
+	scraper.SetSearchMode(twitterscraper.SearchLatest)
 
+	for tweet := range scraper.SearchTweets(context.Background(), tweetQuery, 100) {
+		if tweet.Error != nil {
+			continue
+		}
+
+		result := core.db.Limit(1).Find(&model.TwitterCrawl{}, model.TwitterCrawl{TweetId: tweet.ID})
+		if result.RowsAffected > 0 {
+			continue
+		}
+
+		fmt.Println("tweet.ID", tweet.ID)
+
+		twitterCrawl := model.TwitterCrawl{
+			TweetId:   tweet.ID,
+			UserId:    tweet.UserID,
+			Username:  tweet.Username,
+			Timestamp: time.Unix(tweet.Timestamp, 0),
+			Text:      tweet.Text,
+		}
+		core.db.Create(&twitterCrawl)
+	}
+}
+
+func tickerScan() {
+	tweetQuery := os.Getenv("TWEET_QUERY")
+	if tweetQuery == "" {
+		fmt.Println("Miss env: [tweetQuery]")
+		return
+	}
+
+	var scanTotal int64
+	for {
+		log.Println("scanTotal:", scanTotal)
+
+		scan(tweetQuery)
+		time.Sleep(time.Second * 5)
+
+		scanTotal += 1
+	}
 }
 
 func main() {
-	err := godotenv.Load(fmt.Sprintf("..%c.env", os.PathSeparator))
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
+	godotenv.Load(fmt.Sprintf("..%c.env", os.PathSeparator))
 
-	db := connectDB()
-	db.Config.Name()
+	core.db = connectDB()
 
-	scraper := twitterscraper.New()
-
-	for tweet := range scraper.SearchTweets(context.Background(), "@zksync", 50) {
-		if tweet.Error != nil {
-			panic(tweet.Error)
-		}
-
-		fmt.Println("=============================")
-		fmt.Println("tweet.Timestamp", tweet.Timestamp)
-		fmt.Println("tweet.Text", tweet.Text)
-		fmt.Println("tweet.UserID", tweet.UserID)
-		fmt.Println("tweet.Username", tweet.Username)
-		fmt.Println("tweet.ID", tweet.ID)
-
-	}
-
-	time.Sleep(time.Second * 3)
-
-	// for tweet := range scraper.GetTweets(context.Background(), "Twitter", 50) {
-	// 	if tweet.Error != nil {
-	// 		panic(tweet.Error)
-	// 	}
-	// 	fmt.Println(tweet.Text)
-	// }
+	tickerScan()
 }
