@@ -19,5 +19,5 @@ export class TwitterCrawl extends CommonEntity {
   timestamp: Date
 
   @Column('text')
-  text: string
+  content: string
 }

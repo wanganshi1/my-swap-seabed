@@ -11,7 +11,7 @@ type TwitterCrawl struct {
 	UserId    string
 	Username  string
 	Timestamp time.Time
-	Text      string
+	Content   string
 
 	// ↓ common ↓
 	CreatedBy   uint

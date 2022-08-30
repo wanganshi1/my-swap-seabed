@@ -38,6 +38,7 @@ services:
       DB_PASSWORD: '${DB_PASSWORD}'
       DB_NAME: '${DB_NAME}'
       TWEET_QUERY: '@zksync'
+      PRODUCT_ENV: 'develop'
     restart: always
     networks:
       - l0k_swap-network

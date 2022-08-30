@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/0x60018/10k_swap-seabed/twitter-crawl/model"
@@ -27,6 +28,12 @@ func connectDB() (db *gorm.DB) {
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatal(err.Error())
+	}
+
+	// Migrate tables(Only Develop)
+	PRODUCT_ENV := os.Getenv("PRODUCT_ENV")
+	if strings.EqualFold(PRODUCT_ENV, "develop") {
+		db.AutoMigrate(&model.TwitterCrawl{})
 	}
 
 	return db
@@ -53,7 +60,7 @@ func scan(tweetQuery string) {
 			UserId:    tweet.UserID,
 			Username:  tweet.Username,
 			Timestamp: time.Unix(tweet.Timestamp, 0),
-			Text:      tweet.Text,
+			Content:   tweet.Text,
 		}
 		core.db.Create(&twitterCrawl)
 	}
