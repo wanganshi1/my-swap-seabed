@@ -3,20 +3,20 @@ import { CommonEntity } from './common'
 
 @Entity()
 export class TwitterCrawl extends CommonEntity {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({type:'bigint', unsigned:true})
   id: number
 
   @Column('varchar', { length: 256, unique: true })
-  tweet_id: number
+  tweet_id: string
 
   @Column('varchar', { length: 256 })
-  user_id: number
+  user_id: string
 
   @Column('varchar', { length: 256 })
   username: string
 
-  @Column('timestamp', { default: null })
-  timestamp: Date
+  @Column('datetime', { precision: 6, default: null })
+  tweet_time: Date
 
   @Column('text')
   content: string

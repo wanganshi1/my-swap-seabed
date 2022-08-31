@@ -1,25 +1,18 @@
 package model
 
 import (
-	"database/sql"
 	"time"
 )
 
 type TwitterCrawl struct {
-	Id        uint
-	TweetId   string
-	UserId    string
-	Username  string
-	Timestamp time.Time
-	Content   string
+	CommonEntity
 
-	// ↓ common ↓
-	CreatedBy   uint
-	UpdatedBy   uint
-	PublishedAt sql.NullTime
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	DeletedAt   sql.NullTime
+	ID        uint      `gorm:"column:id;primaryKey;autoIncrement:true" json:"id"`
+	TweetID   string    `gorm:"column:tweet_id;type:varchar(256);not null;unique" json:"tweet_id"`
+	UserID    string    `gorm:"column:user_id;type:varchar(256);not null" json:"user_id"`
+	Username  string    `gorm:"column:username;type:varchar(256);not null" json:"username"`
+	TweetTime time.Time `gorm:"column:tweet_time;precision:6" json:"tweet_time"`
+	Content   string    `gorm:"column:content;type:text;not null" json:"content"`
 }
 
 func (TwitterCrawl) TableName() string {

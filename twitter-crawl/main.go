@@ -48,7 +48,7 @@ func scan(tweetQuery string) {
 			continue
 		}
 
-		result := core.db.Limit(1).Find(&model.TwitterCrawl{}, model.TwitterCrawl{TweetId: tweet.ID})
+		result := core.db.Limit(1).Find(&model.TwitterCrawl{}, model.TwitterCrawl{TweetID: tweet.ID})
 		if result.RowsAffected > 0 {
 			continue
 		}
@@ -56,10 +56,10 @@ func scan(tweetQuery string) {
 		fmt.Println("tweet.ID", tweet.ID)
 
 		twitterCrawl := model.TwitterCrawl{
-			TweetId:   tweet.ID,
-			UserId:    tweet.UserID,
+			TweetID:   tweet.ID,
+			UserID:    tweet.UserID,
 			Username:  tweet.Username,
-			Timestamp: time.Unix(tweet.Timestamp, 0),
+			TweetTime: time.Unix(tweet.Timestamp, 0),
 			Content:   tweet.Text,
 		}
 		core.db.Create(&twitterCrawl)

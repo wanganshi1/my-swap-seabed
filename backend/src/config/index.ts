@@ -7,6 +7,7 @@ import * as logConfig from './log'
 import * as ormConfig from './orm'
 import networkConfig from './network'
 import * as contractConfig from './contract'
+import faucetConfig from './faucet'
 
 const appConfig = {
   options: <ListenOptions>{
@@ -15,4 +16,11 @@ const appConfig = {
   },
 }
 
-export { appConfig, ormConfig, logConfig, networkConfig, contractConfig }
+export {
+  appConfig,
+  ormConfig,
+  logConfig,
+  networkConfig,
+  contractConfig,
+  faucetConfig,
+}

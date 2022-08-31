@@ -8,10 +8,10 @@ import {
 
 export abstract class CommonEntity extends BaseEntity {
   // ↓ common ↓
-  @Column('int', { default: 0 })
+  @Column('bigint', { default: 0, unsigned: true })
   created_by: number
 
-  @Column('int', { default: 0 })
+  @Column('bigint', { default: 0, unsigned: true })
   updated_by: number
 
   @Column('datetime', { precision: 6, default: null })
