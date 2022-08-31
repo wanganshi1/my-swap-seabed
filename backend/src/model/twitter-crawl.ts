@@ -3,7 +3,7 @@ import { CommonEntity } from './common'
 
 @Entity()
 export class TwitterCrawl extends CommonEntity {
-  @PrimaryGeneratedColumn({type:'bigint', unsigned:true})
+  @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
   id: number
 
   @Column('varchar', { length: 256, unique: true })
@@ -20,4 +20,7 @@ export class TwitterCrawl extends CommonEntity {
 
   @Column('text')
   content: string
+
+  @Column('tinyint', { default: 0 })
+  status: number // 0: not faucet, 1: faucet sent
 }

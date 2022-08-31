@@ -13,6 +13,7 @@ type TwitterCrawl struct {
 	Username  string    `gorm:"column:username;type:varchar(256);not null" json:"username"`
 	TweetTime time.Time `gorm:"column:tweet_time;precision:6" json:"tweet_time"`
 	Content   string    `gorm:"column:content;type:text;not null" json:"content"`
+	Status    int8      `gorm:"column:status;default:0" json:"status"`
 }
 
 func (TwitterCrawl) TableName() string {
