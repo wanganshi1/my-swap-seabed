@@ -22,5 +22,5 @@ export class TwitterCrawl extends CommonEntity {
   content: string
 
   @Column('tinyint', { default: 0 })
-  status: number // 0: not faucet, 1: faucet sent
+  status: number // 0: not faucet, 1: faucet sent, 2:fail
 }

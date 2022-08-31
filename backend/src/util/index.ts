@@ -1,4 +1,6 @@
 import dayjs from 'dayjs'
+import { validateAndParseAddress } from 'starknet/dist/utils/address'
+import { ADDRESS_ZORE } from '../constants'
 
 export async function sleep(ms: number) {
   return new Promise((resolve) => {
@@ -86,4 +88,14 @@ export async function doWithRetry<T>(
     }
   }
   return undefined
+}
+
+
+export function isAddress(address: any): string | false {
+  try {
+    const parsed = validateAndParseAddress(address)
+    return parsed === ADDRESS_ZORE ? false : address
+  } catch (error) {
+    return false
+  }
 }
