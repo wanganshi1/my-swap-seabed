@@ -56,7 +56,7 @@ export class FaucetService {
       },
     ]
     const respAB = await account.execute(calls, [erc20 as Abi, erc20 as Abi])
-    accessLogger.log('RespAB.transaction_hash:', respAB.transaction_hash)
+    accessLogger.info('RespAB.transaction_hash:', respAB.transaction_hash)
 
     const eth = bnToUint256(toBN(ethAmount.toString()))
     const respETH = await account.execute(
@@ -69,7 +69,7 @@ export class FaucetService {
       ],
       [erc20 as Abi]
     )
-    accessLogger.log('RespETH.transaction_hash:', respETH.transaction_hash)
+    accessLogger.info('RespETH.transaction_hash:', respETH.transaction_hash)
   }
 
   private async getTweets() {
