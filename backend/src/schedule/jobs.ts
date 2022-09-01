@@ -82,7 +82,7 @@ class MJobPessimism extends MJob {
 
 export function jobFaucetTwitter() {
   const callback = async () => {
-    new FaucetService().fromTwitter()
+    await new FaucetService().fromTwitter()
   }
 
   new MJobPessimism('*/5 * * * * *', callback, jobFaucetTwitter.name).schedule()
