@@ -6,6 +6,7 @@ import erc20 from '../config/abis/erc20.json'
 import { TwitterCrawl } from '../model/twitter-crawl'
 import { isAddress } from '../util'
 import { Core } from '../util/core'
+import { errorLogger } from '../util/logger'
 
 export class FaucetService {
   constructor() {}
@@ -13,7 +14,7 @@ export class FaucetService {
   async fromTwitter() {
     const tweets = await this.getTweets()
 
-    await Promise.all(tweets.map((item) => this.sendTokens(item)))
+    await Promise.all(tweets.map((item: TwitterCrawl) => this.sendTokens(item)))
   }
 
   private async sendTokens(tweet: TwitterCrawl) {
@@ -22,6 +23,7 @@ export class FaucetService {
 
     if (!userAddress) {
       await repository.update({ tweet_id: tweet.tweet_id }, { status: 2 })
+      errorLogger.error(`Miss userAddress, tweet_id: ${tweet.tweet_id}`)
       return
     }
 
@@ -30,7 +32,7 @@ export class FaucetService {
       await repository.update({ tweet_id: tweet.tweet_id }, { status: 1 })
     } catch (error) {
       await repository.update({ tweet_id: tweet.tweet_id }, { status: 2 })
-      console.log('error', error)
+      errorLogger.error('Execute fail:', error.message)
     }
   }
 
