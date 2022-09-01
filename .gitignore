@@ -16,3 +16,7 @@ local.*
 .env
 .data/
 .vscode
+
+# nginx ssl
+nginx.domain.key
+nginx.domain.crt
