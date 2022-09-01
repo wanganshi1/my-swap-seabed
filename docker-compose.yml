@@ -20,6 +20,7 @@ services:
       APP_OPTIONS_PORT: '${APP_OPTIONS_PORT}'
       APP_OPTIONS_HOST: '${APP_OPTIONS_HOST}'
       FAUCET_PRIVATE_KEY: '${FAUCET_PRIVATE_KEY}'
+      FAUCET_ACCOUNT: '${FAUCET_ACCOUNT}'
     volumes:
       - './backend/logs:/app/logs'
     #   - './backend:/app'
