@@ -6,7 +6,7 @@ import erc20 from '../config/abis/erc20.json'
 import { TwitterCrawl } from '../model/twitter-crawl'
 import { isAddress } from '../util'
 import { Core } from '../util/core'
-import { errorLogger } from '../util/logger'
+import { accessLogger, errorLogger } from '../util/logger'
 
 export class FaucetService {
   constructor() {}
@@ -55,10 +55,11 @@ export class FaucetService {
         calldata: [userAddress, b.low, b.high],
       },
     ]
-    await account.execute(calls, [erc20 as Abi, erc20 as Abi])
+    const respAB = await account.execute(calls, [erc20 as Abi, erc20 as Abi])
+    accessLogger.log('RespAB.transaction_hash:', respAB.transaction_hash)
 
     const eth = bnToUint256(toBN(ethAmount.toString()))
-    await account.execute(
+    const respETH = await account.execute(
       [
         {
           contractAddress: ethAddress,
@@ -68,6 +69,7 @@ export class FaucetService {
       ],
       [erc20 as Abi]
     )
+    accessLogger.log('RespETH.transaction_hash:', respETH.transaction_hash)
   }
 
   private async getTweets() {
