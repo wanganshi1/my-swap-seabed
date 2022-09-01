@@ -1,5 +1,6 @@
-import { Account, Provider, ec, Abi } from 'starknet'
-import { toBN, toHex } from 'starknet/dist/utils/number'
+import BN from 'bn.js'
+import { Account, Provider, ec, Abi, number } from 'starknet'
+import { BigNumberish, toBN, toHex } from 'starknet/dist/utils/number'
 import { bnToUint256 } from 'starknet/dist/utils/uint256'
 import { faucetConfig } from '../config'
 import erc20 from '../config/abis/erc20.json'
@@ -11,10 +12,17 @@ import { accessLogger, errorLogger } from '../util/logger'
 export class FaucetService {
   constructor() {}
 
+  // private currentNonce: BN
+
   async fromTwitter() {
     const tweets = await this.getTweets()
 
-    await Promise.all(tweets.map((item: TwitterCrawl) => this.sendTokens(item)))
+    const account = this.getAccount()
+    // this.currentNonce = toBN(await account.getNonce())
+
+    for (const item of tweets) {
+      await this.sendTokens(item)
+    }
   }
 
   private async sendTokens(tweet: TwitterCrawl) {
@@ -43,6 +51,7 @@ export class FaucetService {
 
     const a = bnToUint256(toBN(aAmount.toString()))
     const b = bnToUint256(toBN(bAmount.toString()))
+    const eth = bnToUint256(toBN(ethAmount.toString()))
     const calls = [
       {
         contractAddress: aAddress,
@@ -54,22 +63,20 @@ export class FaucetService {
         entrypoint: 'transfer',
         calldata: [userAddress, b.low, b.high],
       },
+      {
+        contractAddress: ethAddress,
+        entrypoint: 'transfer',
+        calldata: [userAddress, eth.low, eth.high],
+      },
     ]
-    const respAB = await account.execute(calls, [erc20 as Abi, erc20 as Abi])
-    accessLogger.info('RespAB.transaction_hash:', respAB.transaction_hash)
+    const faucetResp = await account.execute(calls, [
+      erc20 as Abi,
+      erc20 as Abi,
+      erc20 as Abi,
+    ])
 
-    const eth = bnToUint256(toBN(ethAmount.toString()))
-    const respETH = await account.execute(
-      [
-        {
-          contractAddress: ethAddress,
-          entrypoint: 'transfer',
-          calldata: [userAddress, eth.low, eth.high],
-        },
-      ],
-      [erc20 as Abi]
-    )
-    accessLogger.info('RespETH.transaction_hash:', respETH.transaction_hash)
+    accessLogger.info('Faucet transaction_hash:', faucetResp.transaction_hash)
+    await account.waitForTransaction(faucetResp.transaction_hash)
   }
 
   private async getTweets() {
