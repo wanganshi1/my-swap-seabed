@@ -11,9 +11,6 @@ export class FaucetService {
   constructor() {}
 
   async fromTwitter() {
-    console.warn(faucetConfig)
-    console.warn('fromTwitter:', new Date())
-
     const tweets = await this.getTweets()
 
     await Promise.all(tweets.map((item) => this.sendTokens(item)))

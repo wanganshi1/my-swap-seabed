@@ -12,7 +12,7 @@ export const abis = {
 
 export const addresses = {
   parirClassHash:
-    '0x78062101eb540ba039dc779bbf908e98b64efb4439bc9abd731e1156abd12cd',
-  factory: '0x07e0879afbf63ec943e58cba0d9e81385f2183f1f9aa44e32f08e877c31fdb98',
-  router: '0x01a5200387983d5acb1c4a8f9be94219fb3bbb9438bb50eb70d9f5398656c78e',
+    '0x231adde42526bad434ca2eb983efdd64472638702f87f97e6e3c084f264e06f',
+  factory: '0x06c31f39524388c982045988de3788530605ed08b10389def2e7b1dd09d19308',
+  router: '0x00975910cd99bc56bd289eaaa5cee6cd557f0ddafdb2ce6ebea15b158eb2c664',
 }
