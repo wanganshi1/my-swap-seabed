@@ -77,6 +77,7 @@ export class FaucetService {
 
     accessLogger.info('Faucet transaction_hash:', faucetResp.transaction_hash)
     await account.waitForTransaction(faucetResp.transaction_hash)
+    accessLogger.info('Transaction_hash fauceted:', faucetResp.transaction_hash)
   }
 
   private async getTweets() {
