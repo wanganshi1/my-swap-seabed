@@ -85,7 +85,7 @@ export function jobFaucetTwitter() {
     await new FaucetService().fromTwitter()
   }
 
-  new MJobPessimism('*/30 * * * * *', callback, jobFaucetTwitter.name).schedule()
+  new MJobPessimism('*/10 * * * * *', callback, jobFaucetTwitter.name).schedule()
 }
 
 export function jobPoolCollect() {
