@@ -1,8 +1,11 @@
 import { ethers } from 'ethers'
 
+const FAUCET_PRIVATE_KEYS = process.env['FAUCET_PRIVATE_KEYS']
+const FAUCET_ACCOUNTS = process.env['FAUCET_ACCOUNTS']
+
 export default {
-  privateKey: process.env['FAUCET_PRIVATE_KEY'],
-  account: process.env['FAUCET_ACCOUNT'],
+  privateKeys: FAUCET_PRIVATE_KEYS?.split(',') || [],
+  accounts: FAUCET_ACCOUNTS?.split(',') || [],
   ethAddress:
     '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7',
   ethAmount: ethers.utils.parseEther('0.01'),

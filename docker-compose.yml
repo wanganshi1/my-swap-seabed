@@ -19,8 +19,8 @@ services:
       DB_NAME: '${DB_NAME}'
       APP_OPTIONS_PORT: '${APP_OPTIONS_PORT}'
       APP_OPTIONS_HOST: '${APP_OPTIONS_HOST}'
-      FAUCET_PRIVATE_KEY: '${FAUCET_PRIVATE_KEY}'
-      FAUCET_ACCOUNT: '${FAUCET_ACCOUNT}'
+      FAUCET_PRIVATE_KEYS: '${FAUCET_PRIVATE_KEYS}' # split with symbol: ,
+      FAUCET_ACCOUNTS: '${FAUCET_ACCOUNTS}' # split with symbol: ,
     volumes:
       - './backend/logs:/app/logs'
     #   - './backend:/app'

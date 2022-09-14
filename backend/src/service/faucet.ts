@@ -1,4 +1,5 @@
 import BN from 'bn.js'
+import { utils } from 'ethers'
 import { Account, Provider, ec, Abi, number } from 'starknet'
 import { BigNumberish, toBN, toHex } from 'starknet/dist/utils/number'
 import { bnToUint256 } from 'starknet/dist/utils/uint256'
@@ -12,20 +13,27 @@ import { accessLogger, errorLogger } from '../util/logger'
 export class FaucetService {
   constructor() {}
 
-  // private currentNonce: BN
-
   async fromTwitter() {
-    const tweets = await this.getTweets()
-
-    const account = this.getAccount()
-    // this.currentNonce = toBN(await account.getNonce())
-
-    for (const item of tweets) {
-      await this.sendTokens(item)
+    const accounts = this.getAccounts()
+    if (accounts.length < 1) {
+      errorLogger.error('FromTwitter failed: Miss accounts')
+      return
     }
+
+    const tweets = await Core.db.getRepository(TwitterCrawl).find({
+      where: { status: 0 },
+      take: accounts.length,
+      order: { tweet_time: 'ASC' },
+    })
+
+    await Promise.all(
+      tweets.map((item, index) => {
+        return this.sendTokens(accounts[index], item)
+      })
+    )
   }
 
-  private async sendTokens(tweet: TwitterCrawl) {
+  private async sendTokens(account: Account, tweet: TwitterCrawl) {
     const userAddress = this.getAddress(tweet.content)
     const repository = Core.db.getRepository(TwitterCrawl)
 
@@ -36,16 +44,17 @@ export class FaucetService {
     }
 
     try {
-      await this.execute(userAddress)
+      await this.execute(account, userAddress)
       await repository.update({ tweet_id: tweet.tweet_id }, { status: 1 })
     } catch (error) {
       await repository.update({ tweet_id: tweet.tweet_id }, { status: 2 })
-      errorLogger.error('Execute fail:', error.message)
+      errorLogger.error(
+        `Execute fail: ${error.message}. Account: ${account.address}`
+      )
     }
   }
 
-  private async execute(userAddress: string) {
-    const account = this.getAccount()
+  private async execute(account: Account, userAddress: string) {
     const { aAddress, aAmount, bAddress, bAmount, ethAddress, ethAmount } =
       faucetConfig
 
@@ -69,30 +78,36 @@ export class FaucetService {
         calldata: [userAddress, eth.low, eth.high],
       },
     ]
-    const faucetResp = await account.execute(calls, [
-      erc20 as Abi,
-      erc20 as Abi,
-      erc20 as Abi,
-    ])
+    const faucetResp = await account.execute(
+      calls,
+      [erc20 as Abi, erc20 as Abi, erc20 as Abi],
+      { maxFee: utils.parseEther('0.01') + '' }
+    )
 
     accessLogger.info('Faucet transaction_hash:', faucetResp.transaction_hash)
     await account.waitForTransaction(faucetResp.transaction_hash)
     accessLogger.info('Transaction_hash fauceted:', faucetResp.transaction_hash)
   }
 
-  private async getTweets() {
-    return await Core.db
-      .getRepository(TwitterCrawl)
-      .find({ where: { status: 0 } })
-  }
-
-  private getAccount() {
+  private getAccounts() {
     const provider = new Provider({
       network: 'goerli-alpha',
     })
-    const pk = toHex(toBN(faucetConfig.privateKey!))
-    const keyPair = ec.getKeyPair(pk)
-    return new Account(provider, faucetConfig.account!.toLowerCase(), keyPair)
+
+    const accounts: Account[] = []
+
+    for (const i in faucetConfig.privateKeys) {
+      const privateKey = faucetConfig.privateKeys[i]
+      const address = faucetConfig.accounts[i]
+      if (!privateKey || !address) {
+        continue
+      }
+
+      const pk = toHex(toBN(privateKey))
+      const keyPair = ec.getKeyPair(pk)
+      accounts.push(new Account(provider, address.toLowerCase(), keyPair))
+    }
+    return accounts
   }
 
   private getAddress(content: string): string | undefined {
