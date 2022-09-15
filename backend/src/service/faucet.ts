@@ -111,7 +111,7 @@ export class FaucetService {
   }
 
   private getAddress(content: string): string | undefined {
-    const reg = new RegExp(/0x[a-fA-F0-9]{62,66}/gi)
+    const reg = new RegExp(/0x[a-fA-F0-9]{61,66}/gi)
     const address = content.match(reg)?.[0]
 
     return isAddress(address) ? address : undefined
