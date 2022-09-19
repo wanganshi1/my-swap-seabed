@@ -2,7 +2,7 @@ import axios from 'axios'
 import { Contract, number, Provider } from 'starknet'
 import { StarknetChainId } from 'starknet/dist/constants'
 import { getSelectorFromName } from 'starknet/dist/utils/hash'
-import { BigNumberish, toBN, toHex } from 'starknet/dist/utils/number'
+import { toBN, toHex } from 'starknet/dist/utils/number'
 import { uint256ToBN } from 'starknet/dist/utils/uint256'
 import { contractConfig } from '../config'
 
@@ -25,15 +25,16 @@ export class PoolService {
 
   constructor(provider: Provider) {
     this.provider = provider
-    this.factoryAddress = contractConfig.addresses.factory
     this.eventKey = getSelectorFromName('PairCreated')
 
     switch (this.provider.chainId) {
       case StarknetChainId.MAINNET:
+        this.factoryAddress = contractConfig.addresses.mainnet.factory
         this.voyagerOrigin = 'https://voyager.online'
         break
       case StarknetChainId.TESTNET:
       default:
+        this.factoryAddress = contractConfig.addresses.goerli.factory
         this.voyagerOrigin = 'https://goerli.voyager.online'
         break
     }

@@ -1,7 +1,10 @@
+import { isDevelopEnv } from '../util'
 import { jobFaucetTwitter, jobPoolCollect } from './jobs'
 
 export const startMasterJobs = async () => {
-  jobFaucetTwitter()
+  // Only develop env
+  if (isDevelopEnv()) jobFaucetTwitter()
+
   jobPoolCollect()
 }
 

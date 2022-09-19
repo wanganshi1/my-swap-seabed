@@ -19,6 +19,7 @@ services:
       DB_NAME: '${DB_NAME}'
       APP_OPTIONS_PORT: '${APP_OPTIONS_PORT}'
       APP_OPTIONS_HOST: '${APP_OPTIONS_HOST}'
+      PRODUCT_ENV: '${PRODUCT_ENV}'
       FAUCET_PRIVATE_KEYS: '${FAUCET_PRIVATE_KEYS}' # split with symbol: ,
       FAUCET_ACCOUNTS: '${FAUCET_ACCOUNTS}' # split with symbol: ,
     volumes:
@@ -40,7 +41,7 @@ services:
       DB_PASSWORD: '${DB_PASSWORD}'
       DB_NAME: '${DB_NAME}'
       TWEET_QUERY: '10Kswap'
-      PRODUCT_ENV: 'develop'
+      PRODUCT_ENV: '${PRODUCT_ENV}'
     restart: always
     networks:
       - l0k_swap-network

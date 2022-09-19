@@ -90,7 +90,6 @@ export async function doWithRetry<T>(
   return undefined
 }
 
-
 export function isAddress(address: any): string | false {
   try {
     const parsed = validateAndParseAddress(address)
@@ -98,4 +97,9 @@ export function isAddress(address: any): string | false {
   } catch (error) {
     return false
   }
+}
+
+export function isDevelopEnv() {
+  const productEnv = process.env['PRODUCT_ENV'] || ''
+  return productEnv.toLowerCase() != 'production'
 }
