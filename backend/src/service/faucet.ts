@@ -11,26 +11,32 @@ import { Core } from '../util/core'
 import { accessLogger, errorLogger } from '../util/logger'
 
 export class FaucetService {
+  private accountWorking: { [key: string]: boolean } = {}
+
   constructor() {}
 
   async fromTwitter() {
     const accounts = this.getAccounts()
-    if (accounts.length < 1) {
-      errorLogger.error('FromTwitter failed: Miss accounts')
+
+    // Filter working account
+    const noWorkingAccounts = accounts.filter(
+      (item) => this.accountWorking[item.address] !== true
+    )
+
+    if (noWorkingAccounts.length < 1) {
+      // errorLogger.error('FromTwitter failed: Miss no working accounts')
       return
     }
 
     const tweets = await Core.db.getRepository(TwitterCrawl).find({
       where: { status: 0 },
-      take: accounts.length,
+      take: noWorkingAccounts.length,
       order: { tweet_time: 'ASC' },
     })
 
-    await Promise.all(
-      tweets.map((item, index) => {
-        return this.sendTokens(accounts[index], item)
-      })
-    )
+    tweets.map((item, index) => {
+      return this.sendTokens(noWorkingAccounts[index], item)
+    })
   }
 
   private async sendTokens(account: Account, tweet: TwitterCrawl) {
@@ -43,6 +49,9 @@ export class FaucetService {
       return
     }
 
+    // Set account working
+    this.accountWorking[account.address] = true
+
     try {
       await this.execute(account, userAddress)
       await repository.update({ tweet_id: tweet.tweet_id }, { status: 1 })
@@ -52,6 +61,9 @@ export class FaucetService {
         `Execute fail: ${error.message}. Account: ${account.address}`
       )
     }
+
+    // Set account no working
+    this.accountWorking[account.address] = false
   }
 
   private async execute(account: Account, userAddress: string) {
