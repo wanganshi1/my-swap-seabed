@@ -64,6 +64,11 @@ export class FaucetService {
       }
     }
 
+    // Check recipients
+    if (recipients.length === 0) {
+      return
+    }
+
     // Set account working
     this.accountWorking[account.address] = true
 
