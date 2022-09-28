@@ -12,7 +12,7 @@ type Pair = {
   pairAddress: string
   totalSupply: string // hex
   decimals: number
-  APR: number
+  APR: string
 }
 
 export class PoolService {
@@ -118,12 +118,15 @@ export class PoolService {
 
       const pairInfo = await this.getPairInfo(pairAddress)
 
+      // Goerli mock APR
+      const APR = (parseInt('0x' + pairAddress.slice(-2), 16) / 2).toFixed(2)
+
       _pairs.push({
         token0: { address: token0, ...token0Info },
         token1: { address: token1, ...token1Info },
         pairAddress: pairAddress,
         ...pairInfo,
-        APR: 2,
+        APR,
       })
     }
 

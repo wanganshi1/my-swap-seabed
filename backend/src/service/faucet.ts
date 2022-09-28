@@ -1,12 +1,11 @@
-import BN from 'bn.js'
 import { utils } from 'ethers'
-import { Account, Provider, ec, Abi, number } from 'starknet'
-import { BigNumberish, toBN, toHex } from 'starknet/dist/utils/number'
+import { Abi, Account, ec, Provider } from 'starknet'
+import { toBN, toHex } from 'starknet/dist/utils/number'
 import { bnToUint256 } from 'starknet/dist/utils/uint256'
 import { faucetConfig } from '../config'
 import erc20 from '../config/abis/erc20.json'
 import { TwitterCrawl } from '../model/twitter-crawl'
-import { isAddress } from '../util'
+import { isAddress, sleep } from '../util'
 import { Core } from '../util/core'
 import { accessLogger, errorLogger } from '../util/logger'
 
@@ -17,35 +16,47 @@ export class FaucetService {
 
   async fromTwitter() {
     const accounts = this.getAccounts()
-
-    // Filter working account
-    const noWorkingAccounts = accounts.filter(
-      (item) => this.accountWorking[item.address] !== true
-    )
-
-    if (noWorkingAccounts.length < 1) {
-      // errorLogger.error('FromTwitter failed: Miss no working accounts')
+    if (accounts.length < 1) {
+      errorLogger.error('FromTwitter failed: Miss accounts')
       return
     }
 
     const tweets = await Core.db.getRepository(TwitterCrawl).find({
       where: { status: 0 },
-      take: noWorkingAccounts.length,
+      take: 200,
       order: { tweet_time: 'ASC' },
     })
 
-    tweets.map((item, index) => {
-      return this.sendTokens(noWorkingAccounts[index], item)
-    })
+    for (const tweet of tweets) {
+      // Get no working account(If not please wait)
+      let noWorkingAccount: Account | undefined
+      while (true) {
+        noWorkingAccount = accounts.find(
+          (item) => this.accountWorking[item.address] !== true
+        )
+        if (noWorkingAccount) {
+          break
+        } else {
+          await sleep(1000)
+        }
+      }
+
+      this.sendTokens(noWorkingAccount, tweet)
+
+      // Reduce "Too Many Requests" prompts
+      await sleep(2000)
+    }
   }
 
   private async sendTokens(account: Account, tweet: TwitterCrawl) {
-    const userAddress = this.getAddress(tweet.content)
+    const recipient = this.getAddress(tweet.content)
     const repository = Core.db.getRepository(TwitterCrawl)
 
-    if (!userAddress) {
+    if (recipient) {
+      await repository.update({ tweet_id: tweet.tweet_id }, { recipient })
+    } else {
       await repository.update({ tweet_id: tweet.tweet_id }, { status: 2 })
-      errorLogger.error(`Miss userAddress, tweet_id: ${tweet.tweet_id}`)
+      errorLogger.error(`Miss recipient, tweet_id: ${tweet.tweet_id}`)
       return
     }
 
@@ -53,20 +64,26 @@ export class FaucetService {
     this.accountWorking[account.address] = true
 
     try {
-      await this.execute(account, userAddress)
+      await this.execute(account, recipient)
       await repository.update({ tweet_id: tweet.tweet_id }, { status: 1 })
     } catch (error) {
-      await repository.update({ tweet_id: tweet.tweet_id }, { status: 2 })
       errorLogger.error(
         `Execute fail: ${error.message}. Account: ${account.address}`
       )
-    }
 
-    // Set account no working
-    this.accountWorking[account.address] = false
+      // Retry "Too Many Requests" and "nonce invalid" errors
+      const retry = /(Too Many Requests|nonce invalid)/gi.test(error.message)
+
+      if (!retry) {
+        await repository.update({ tweet_id: tweet.tweet_id }, { status: 2 })
+      }
+    } finally {
+      // Set account no working
+      this.accountWorking[account.address] = false
+    }
   }
 
-  private async execute(account: Account, userAddress: string) {
+  private async execute(account: Account, recipient: string) {
     const { aAddress, aAmount, bAddress, bAmount, ethAddress, ethAmount } =
       faucetConfig
 
@@ -77,17 +94,17 @@ export class FaucetService {
       {
         contractAddress: aAddress,
         entrypoint: 'transfer',
-        calldata: [userAddress, a.low, a.high],
+        calldata: [recipient, a.low, a.high],
       },
       {
         contractAddress: bAddress,
         entrypoint: 'transfer',
-        calldata: [userAddress, b.low, b.high],
+        calldata: [recipient, b.low, b.high],
       },
       {
         contractAddress: ethAddress,
         entrypoint: 'transfer',
-        calldata: [userAddress, eth.low, eth.high],
+        calldata: [recipient, eth.low, eth.high],
       },
     ]
     const faucetResp = await account.execute(

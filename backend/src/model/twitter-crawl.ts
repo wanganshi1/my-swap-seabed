@@ -21,6 +21,9 @@ export class TwitterCrawl extends CommonEntity {
   @Column('text')
   content: string
 
+  @Column('varchar', { length: 256, default: '' })
+  recipient: string
+
   @Column('tinyint', { default: 0 })
   status: number // 0: not faucet, 1: faucet sent, 2:fail
 }
