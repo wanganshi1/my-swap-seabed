@@ -11,7 +11,7 @@ import { Core } from '../util/core'
 import { accessLogger, errorLogger } from '../util/logger'
 
 export class FaucetService {
-  private accountWorking: { [key: string]: boolean } = {}
+  private static accountWorking: { [key: string]: boolean } = {}
 
   constructor() {}
 
@@ -24,8 +24,11 @@ export class FaucetService {
 
     const accountTweetQuantity = 20
     const noWorkingAccounts = accounts.filter(
-      (item) => this.accountWorking[item.address] !== true
+      (item) => FaucetService.accountWorking[item.address] !== true
     )
+    if (noWorkingAccounts.length < 1) {
+      return
+    }
 
     const tweets = await Core.db.getRepository(TwitterCrawl).find({
       where: { status: 0 },
@@ -71,7 +74,7 @@ export class FaucetService {
     }
 
     // Set account working
-    this.accountWorking[account.address] = true
+    FaucetService.accountWorking[account.address] = true
 
     try {
       await this.execute(account, recipients)
@@ -93,7 +96,7 @@ export class FaucetService {
       }
     } finally {
       // Set account no working
-      this.accountWorking[account.address] = false
+      FaucetService.accountWorking[account.address] = false
     }
   }
 
