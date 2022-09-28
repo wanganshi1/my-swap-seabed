@@ -1,7 +1,8 @@
 import { utils } from 'ethers'
-import { Abi, Account, ec, Provider } from 'starknet'
+import { Abi, Account, Call, ec, Provider } from 'starknet'
 import { toBN, toHex } from 'starknet/dist/utils/number'
 import { bnToUint256 } from 'starknet/dist/utils/uint256'
+import { In } from 'typeorm'
 import { faucetConfig } from '../config'
 import erc20 from '../config/abis/erc20.json'
 import { TwitterCrawl } from '../model/twitter-crawl'
@@ -21,60 +22,65 @@ export class FaucetService {
       return
     }
 
+    const accountTweetQuantity = 20
+    const noWorkingAccounts = accounts.filter(
+      (item) => this.accountWorking[item.address] !== true
+    )
+
     const tweets = await Core.db.getRepository(TwitterCrawl).find({
       where: { status: 0 },
-      take: 200,
+      take: accountTweetQuantity * noWorkingAccounts.length,
       order: { tweet_time: 'ASC' },
     })
 
-    for (const tweet of tweets) {
-      // Get no working account(If not please wait)
-      let noWorkingAccount: Account | undefined
-      while (true) {
-        noWorkingAccount = accounts.find(
-          (item) => this.accountWorking[item.address] !== true
-        )
-        if (noWorkingAccount) {
-          break
-        } else {
-          await sleep(1000)
-        }
-      }
+    let start = 0
+    for (const account of noWorkingAccounts) {
+      const end = start + accountTweetQuantity
+      const groupTweets = tweets.slice(start, end)
 
-      this.sendTokens(noWorkingAccount, tweet)
+      this.sendTokens(account, groupTweets)
 
       // Reduce "Too Many Requests" prompts
-      await sleep(2000)
+      await sleep(5000)
+
+      start = end
     }
   }
 
-  private async sendTokens(account: Account, tweet: TwitterCrawl) {
-    const recipient = this.getAddress(tweet.content)
+  private async sendTokens(account: Account, tweets: TwitterCrawl[]) {
     const repository = Core.db.getRepository(TwitterCrawl)
 
-    if (recipient) {
-      await repository.update({ tweet_id: tweet.tweet_id }, { recipient })
-    } else {
-      await repository.update({ tweet_id: tweet.tweet_id }, { status: 2 })
-      errorLogger.error(`Miss recipient, tweet_id: ${tweet.tweet_id}`)
-      return
+    const recipients: string[] = []
+    const tweet_ids: string[] = []
+    for (const tweet of tweets) {
+      const recipient = this.getAddress(tweet.content)
+      if (recipient) {
+        recipients.push(recipient)
+        tweet_ids.push(tweet.tweet_id)
+
+        await repository.update({ tweet_id: tweet.tweet_id }, { recipient })
+      } else {
+        await repository.update({ tweet_id: tweet.tweet_id }, { status: 2 })
+      }
     }
 
     // Set account working
     this.accountWorking[account.address] = true
 
     try {
-      await this.execute(account, recipient)
-      await repository.update({ tweet_id: tweet.tweet_id }, { status: 1 })
+      await this.execute(account, recipients)
+      await repository.update({ tweet_id: In(tweet_ids) }, { status: 1 })
     } catch (error) {
-      // Retry "Too Many Requests" and "nonce invalid" errors
-      const retry = /(Too Many Requests|nonce invalid)/gi.test(error.message)
+      // Retry "Too Many Requests" | "nonce invalid" | "nonce is invalid" errors
+      const retry = /(Too Many Requests|nonce invalid|nonce is invalid)/gi.test(
+        error.message
+      )
 
       if (!retry) {
-        await repository.update({ tweet_id: tweet.tweet_id }, { status: 2 })
         errorLogger.error(
           `Execute fail: ${error.message}. Account: ${account.address}`
         )
+        await repository.update({ tweet_id: In(tweet_ids) }, { status: 2 })
       }
     } finally {
       // Set account no working
@@ -82,35 +88,42 @@ export class FaucetService {
     }
   }
 
-  private async execute(account: Account, recipient: string) {
+  private async execute(account: Account, recipients: string[]) {
     const { aAddress, aAmount, bAddress, bAmount, ethAddress, ethAmount } =
       faucetConfig
 
     const a = bnToUint256(toBN(aAmount.toString()))
     const b = bnToUint256(toBN(bAmount.toString()))
     const eth = bnToUint256(toBN(ethAmount.toString()))
-    const calls = [
-      {
+
+    const calls: Call[] = []
+    const abis: Abi[] = []
+    for (const recipient of recipients) {
+      calls.push({
         contractAddress: aAddress,
         entrypoint: 'transfer',
         calldata: [recipient, a.low, a.high],
-      },
-      {
+      })
+      abis.push(erc20 as Abi)
+
+      calls.push({
         contractAddress: bAddress,
         entrypoint: 'transfer',
         calldata: [recipient, b.low, b.high],
-      },
-      {
+      })
+      abis.push(erc20 as Abi)
+
+      calls.push({
         contractAddress: ethAddress,
         entrypoint: 'transfer',
         calldata: [recipient, eth.low, eth.high],
-      },
-    ]
-    const faucetResp = await account.execute(
-      calls,
-      [erc20 as Abi, erc20 as Abi, erc20 as Abi],
-      { maxFee: utils.parseEther('0.01') + '' }
-    )
+      })
+      abis.push(erc20 as Abi)
+    }
+
+    const faucetResp = await account.execute(calls, abis, {
+      maxFee: utils.parseEther('0.01') + '',
+    })
 
     accessLogger.info('Faucet transaction_hash:', faucetResp.transaction_hash)
     await account.waitForTransaction(faucetResp.transaction_hash)
