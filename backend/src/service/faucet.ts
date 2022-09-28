@@ -82,7 +82,10 @@ export class FaucetService {
         error.message
       )
 
-      if (!retry) {
+      if (retry) {
+        // Retry
+        await repository.update({ tweet_id: In(tweet_ids) }, { status: 0 })
+      } else {
         errorLogger.error(
           `Execute fail: ${error.message}. Account: ${account.address}`
         )
