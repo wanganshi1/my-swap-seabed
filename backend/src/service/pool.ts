@@ -78,10 +78,6 @@ export class PoolService {
   }
 
   async pairs() {
-    if (PoolService._pairs.length == 0) {
-      await this.collect()
-    }
-
     return PoolService._pairs
   }
 
@@ -119,7 +115,9 @@ export class PoolService {
       const pairInfo = await this.getPairInfo(pairAddress)
 
       // Goerli mock APR
-      const APR = Math.sqrt(parseInt('0x' + pairAddress.slice(-2), 16)).toFixed(0)
+      const APR = Math.sqrt(parseInt('0x' + pairAddress.slice(-2), 16)).toFixed(
+        0
+      )
 
       _pairs.push({
         token0: { address: token0, ...token0Info },
