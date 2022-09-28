@@ -25,5 +25,5 @@ export class TwitterCrawl extends CommonEntity {
   recipient: string
 
   @Column('tinyint', { default: 0 })
-  status: number // 0: not faucet, 1: faucet sent, 2:fail
+  status: number // 0: not faucet, 1: faucet sent, 2:fail, 3: fauceting
 }

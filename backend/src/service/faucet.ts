@@ -58,7 +58,8 @@ export class FaucetService {
         recipients.push(recipient)
         tweet_ids.push(tweet.tweet_id)
 
-        await repository.update({ tweet_id: tweet.tweet_id }, { recipient })
+        // Update status=3(fauceting)
+        await repository.update({ tweet_id: tweet.tweet_id }, { recipient, status: 3 })
       } else {
         await repository.update({ tweet_id: tweet.tweet_id }, { status: 2 })
       }
