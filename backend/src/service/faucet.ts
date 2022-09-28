@@ -67,15 +67,14 @@ export class FaucetService {
       await this.execute(account, recipient)
       await repository.update({ tweet_id: tweet.tweet_id }, { status: 1 })
     } catch (error) {
-      errorLogger.error(
-        `Execute fail: ${error.message}. Account: ${account.address}`
-      )
-
       // Retry "Too Many Requests" and "nonce invalid" errors
       const retry = /(Too Many Requests|nonce invalid)/gi.test(error.message)
 
       if (!retry) {
         await repository.update({ tweet_id: tweet.tweet_id }, { status: 2 })
+        errorLogger.error(
+          `Execute fail: ${error.message}. Account: ${account.address}`
+        )
       }
     } finally {
       // Set account no working
