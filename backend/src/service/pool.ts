@@ -1,17 +1,21 @@
-import axios from 'axios'
-import { Contract, number, Provider } from 'starknet'
+import axios, { AxiosInstance } from 'axios'
+import axiosRetry from 'axios-retry'
+import { AsyncContractFunction, Contract, number, Provider } from 'starknet'
 import { StarknetChainId } from 'starknet/dist/constants'
 import { getSelectorFromName } from 'starknet/dist/utils/hash'
 import { toBN, toHex } from 'starknet/dist/utils/number'
 import { uint256ToBN } from 'starknet/dist/utils/uint256'
 import { contractConfig } from '../config'
+import { sleep } from '../util'
 
 type Pair = {
   token0: { address: string; name: string; symbol: string; decimals: number }
   token1: { address: string; name: string; symbol: string; decimals: number }
-  pairAddress: string
-  totalSupply: string // hex
+  pairAddress: String
   decimals: number
+  reserve0: string // hex
+  reserve1: string // hex
+  totalSupply: string // hex
   APR: string
 }
 
@@ -21,7 +25,7 @@ export class PoolService {
   private provider: Provider
   private factoryAddress: string
   private eventKey: string
-  private voyagerOrigin: string
+  private axiosClient: AxiosInstance
 
   constructor(provider: Provider) {
     this.provider = provider
@@ -30,13 +34,40 @@ export class PoolService {
     switch (this.provider.chainId) {
       case StarknetChainId.MAINNET:
         this.factoryAddress = contractConfig.addresses.mainnet.factory
-        this.voyagerOrigin = 'https://voyager.online'
+        this.axiosClient = axios.create({ baseURL: 'https://voyager.online' })
         break
       case StarknetChainId.TESTNET:
       default:
         this.factoryAddress = contractConfig.addresses.goerli.factory
-        this.voyagerOrigin = 'https://goerli.voyager.online'
+        this.axiosClient = axios.create({
+          baseURL: 'https://goerli.voyager.online',
+        })
         break
+    }
+    axiosRetry(this.axiosClient, { retries: 3 })
+  }
+
+  private async contractCallWithRetry(
+    func: AsyncContractFunction,
+    args: any[] = [],
+    retryTotal = 0
+  ) {
+    try {
+      return await func(args)
+    } catch (err) {
+      // Retry "Too Many Requests" error
+      const retry = /(Too Many Requests)/gi.test(err.message)
+      if (retry) {
+        retryTotal += 1
+
+        // Exponential Avoidance
+        const ms = parseInt(retryTotal * retryTotal * 200 + '')
+        await sleep(ms <= 5000 ? ms : 5000) // max: 5000ms
+
+        return await this.contractCallWithRetry(func, args, retryTotal)
+      }
+
+      throw err
     }
   }
 
@@ -47,9 +78,11 @@ export class PoolService {
       this.provider
     )
 
-    const { name } = await contract.name()
-    const { symbol } = await contract.symbol()
-    const { decimals } = await contract.decimals()
+    const [{ name }, { symbol }, { decimals }] = await Promise.all([
+      this.contractCallWithRetry(contract.name),
+      this.contractCallWithRetry(contract.symbol),
+      this.contractCallWithRetry(contract.decimals),
+    ])
 
     return {
       name: toBN(name).toBuffer().toString('utf-8'),
@@ -65,9 +98,12 @@ export class PoolService {
       this.provider
     )
 
-    const { totalSupply } = await contract.totalSupply()
-    const { decimals } = await contract.decimals()
-    const { reserve0, reserve1 } = await contract.getReserves()
+    const [{ totalSupply }, { decimals }, { reserve0, reserve1 }] =
+      await Promise.all([
+        this.contractCallWithRetry(contract.totalSupply),
+        this.contractCallWithRetry(contract.decimals),
+        this.contractCallWithRetry(contract.getReserves),
+      ])
 
     return {
       totalSupply: toHex(uint256ToBN(totalSupply)),
@@ -86,9 +122,10 @@ export class PoolService {
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36'
     const headers = { 'user-agent': userAgent }
 
-    const eventsURL = `${this.voyagerOrigin}/api/events?contract=${this.factoryAddress}&ps=100&p=1`
-
-    const resp = await axios.get(eventsURL, { headers })
+    const resp = await this.axiosClient.get(
+      `/api/events?contract=${this.factoryAddress}&ps=100&p=1`,
+      { headers }
+    )
 
     const items = resp.data?.items
     if (!items) {
@@ -97,8 +134,9 @@ export class PoolService {
 
     const _pairs: Pair[] = []
     for (const item of items) {
-      const eventURL = `${this.voyagerOrigin}/api/event/${item.id}`
-      const eventResp = await axios.get(eventURL, { headers })
+      const eventResp = await this.axiosClient.get(`/api/event/${item.id}`, {
+        headers,
+      })
 
       // filter
       if (!toBN(eventResp.data?.keys?.[0]).eq(toBN(this.eventKey))) {
@@ -109,10 +147,11 @@ export class PoolService {
       const token1 = number.toHex(toBN(eventResp.data.data[1]))
       const pairAddress = number.toHex(toBN(eventResp.data.data[2]))
 
-      const token0Info = await this.getErc20Info(token0)
-      const token1Info = await this.getErc20Info(token1)
-
-      const pairInfo = await this.getPairInfo(pairAddress)
+      const [token0Info, token1Info, pairInfo] = await Promise.all([
+        this.getErc20Info(token0),
+        this.getErc20Info(token1),
+        this.getPairInfo(pairAddress),
+      ])
 
       // Goerli mock APR
       const APR = Math.sqrt(parseInt('0x' + pairAddress.slice(-2), 16)).toFixed(
