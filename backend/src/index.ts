@@ -1,6 +1,4 @@
-import axios from 'axios'
 import cluster from 'cluster'
-import { ethers } from 'ethers'
 import Koa from 'koa'
 import koaBodyparser from 'koa-bodyparser'
 import cors from 'koa2-cors'

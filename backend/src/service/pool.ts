@@ -8,10 +8,10 @@ import { uint256ToBN } from 'starknet/dist/utils/uint256'
 import { contractConfig } from '../config'
 import { sleep } from '../util'
 
-type Pair = {
+export type Pair = {
   token0: { address: string; name: string; symbol: string; decimals: number }
   token1: { address: string; name: string; symbol: string; decimals: number }
-  pairAddress: String
+  pairAddress: string
   decimals: number
   reserve0: string // hex
   reserve1: string // hex

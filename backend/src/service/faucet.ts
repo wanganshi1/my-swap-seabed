@@ -5,7 +5,7 @@ import { bnToUint256 } from 'starknet/dist/utils/uint256'
 import { In } from 'typeorm'
 import { faucetConfig } from '../config'
 import erc20 from '../config/abis/erc20.json'
-import { TwitterCrawl } from '../model/twitter-crawl'
+import { TwitterCrawl } from '../model/twitter_crawl'
 import { isAddress, sleep } from '../util'
 import { Core } from '../util/core'
 import { accessLogger, errorLogger } from '../util/logger'
@@ -62,7 +62,10 @@ export class FaucetService {
         tweet_ids.push(tweet.tweet_id)
 
         // Update status=3(fauceting)
-        await repository.update({ tweet_id: tweet.tweet_id }, { recipient, status: 3 })
+        await repository.update(
+          { tweet_id: tweet.tweet_id },
+          { recipient, status: 3 }
+        )
       } else {
         await repository.update({ tweet_id: tweet.tweet_id }, { status: 2 })
       }
@@ -143,9 +146,7 @@ export class FaucetService {
   }
 
   private getAccounts() {
-    const provider = new Provider({
-      network: 'goerli-alpha',
-    })
+    const provider = new Provider({ network: 'goerli-alpha' })
 
     const accounts: Account[] = []
 

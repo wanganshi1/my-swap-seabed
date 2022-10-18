@@ -1,8 +1,9 @@
 import schedule from 'node-schedule'
 import { Provider } from 'starknet'
 import { FaucetService } from '../service/faucet'
+import { PairEventService } from '../service/pair_event'
+import { PairTransactionService } from '../service/pair_transaction'
 import { PoolService } from '../service/pool'
-import { isDevelopEnv } from '../util'
 import { errorLogger } from '../util/logger'
 
 // import { doSms } from '../sms/smsSchinese'
@@ -92,11 +93,32 @@ export function jobFaucetTwitter() {
   ).schedule()
 }
 
-export function jobPoolCollect() {
+export function jobPairEventStartWork(provider: Provider) {
   const callback = async () => {
-    const provider = new Provider({
-      network: isDevelopEnv() ? 'goerli-alpha' : 'mainnet-alpha',
-    })
+    await new PairEventService(provider).startWork()
+  }
+
+  new MJobPessimism(
+    '*/5 * * * * *',
+    callback,
+    jobPairEventStartWork.name
+  ).schedule()
+}
+
+export function jobPairTransactionPurify(provider: Provider) {
+  const callback = async () => {
+    await new PairTransactionService(provider).purify()
+  }
+
+  new MJobPessimism(
+    '*/5 * * * * *',
+    callback,
+    jobPairTransactionPurify.name
+  ).schedule()
+}
+
+export function jobPoolCollect(provider: Provider) {
+  const callback = async () => {
     await new PoolService(provider).collect()
   }
 
