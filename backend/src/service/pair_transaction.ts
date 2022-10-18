@@ -27,13 +27,34 @@ export class PairTransactionService {
     // }
 
     const pairEvents = await this.repoPairEvents.find({
-      where: { key_name: In(['Swap', 'Mint', 'Burn']) , status: 0},
+      where: { key_name: In(['Swap', 'Mint', 'Burn']), status: 0 },
       order: { event_time: 'ASC' },
       take: 100,
     })
 
-    console.warn('pairEvents:', pairEvents)
+    await this.getAccountAddress(pairEvents[0])
 
     // await Promise.all(pairs.map((pair) => this.collect(pair)))
+  }
+
+  async getAccountAddress(pairEvent: PairEvent) {
+    const userAgent =
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36'
+    const headers = { 'user-agent': userAgent }
+
+    const postData = {
+      operationName: 'transaction',
+      variables: {
+        input: {
+          transaction_hash: pairEvent.transaction_hash,
+        },
+      },
+      query:
+        'query transaction($input: TransactionInput!) {\n  transaction(input: $input) {\n    transaction_hash\n    contract_address\n}\n}',
+    }
+
+    const resp = await this.axiosClient.post('/graphql', postData, { headers })
+
+    console.warn('resp.data?.data?.transaction:', resp.data?.data?.transaction)
   }
 }
