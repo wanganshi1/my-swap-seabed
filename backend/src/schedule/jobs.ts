@@ -1,5 +1,6 @@
 import schedule from 'node-schedule'
 import { Provider } from 'starknet'
+import { CoinbaseService } from '../service/coinbase'
 import { FaucetService } from '../service/faucet'
 import { PairEventService } from '../service/pair_event'
 import { PairTransactionService } from '../service/pair_transaction'
@@ -91,6 +92,14 @@ export function jobFaucetTwitter() {
     callback,
     jobFaucetTwitter.name
   ).schedule()
+}
+
+export function jobCoinbaseCache() {
+  const callback = async () => {
+    await new CoinbaseService().cache()
+  }
+
+  new MJobPessimism('*/5 * * * * *', callback, jobCoinbaseCache.name).schedule()
 }
 
 export function jobPairEventStartWork(provider: Provider) {

@@ -1,6 +1,7 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm'
+import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm'
 import { CommonEntity } from './common'
 
+@Index(['event_id'])
 @Entity()
 export class PairTransaction extends CommonEntity {
   @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
@@ -8,6 +9,9 @@ export class PairTransaction extends CommonEntity {
 
   @Column('varchar', { length: 256 })
   pair_address: string
+
+  @Column('varchar', { length: 256 })
+  event_id: string
 
   @Column('varchar', { length: 256 })
   transaction_hash: string
@@ -21,15 +25,15 @@ export class PairTransaction extends CommonEntity {
   @Column('datetime', { precision: 6, default: null })
   event_time: Date
 
-  @Column('varchar', { length: 256 })
+  @Column('varchar', { length: 256, default: '' })
   token0_amount: string
 
-  @Column('varchar', { length: 256 })
+  @Column('varchar', { length: 256, default: '' })
   token1_amount: string
 
-  @Column('varchar', { length: 256 })
-  token0_fee: string
+  @Column('tinyint', { default: 0 })
+  swap_reverse: number // 0: Swap token0 for token1, 1: Swap token1 for token0
 
-  @Column('varchar', { length: 256 })
-  token1_fee: string
+  @Column('varchar', { length: 256, default: '' })
+  fee: string // If swap_reverse is 0, fee from token0. If swap_reverse is 1, fee from token1
 }

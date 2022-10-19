@@ -3,6 +3,7 @@ import { CommonEntity } from './common'
 
 @Index(['event_id'])
 @Index(['key_name', 'status'])
+@Index(['pair_address'])
 @Entity()
 export class PairEvent extends CommonEntity {
   @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
@@ -33,5 +34,5 @@ export class PairEvent extends CommonEntity {
   source_data: string
 
   @Column('tinyint', { default: 0 })
-  status: number // 0: not purify, 1: purified
+  status: number // 0: not purify, 1: purified, 2: purify failed
 }

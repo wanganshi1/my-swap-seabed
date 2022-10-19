@@ -1,21 +1,21 @@
-import { Provider } from 'starknet'
-import { isDevelopEnv } from '../util'
+import { getProviderFromEnv, isDevelopEnv } from '../util'
 import {
+  jobCoinbaseCache,
   jobFaucetTwitter,
   jobPairEventStartWork,
   jobPairTransactionPurify,
-  jobPoolCollect,
+  jobPoolCollect
 } from './jobs'
 
 export const startMasterJobs = async () => {
   // Only develop env
   if (isDevelopEnv()) jobFaucetTwitter()
 
-  const provider = new Provider({
-    network: isDevelopEnv() ? 'goerli-alpha' : 'mainnet-alpha',
-  })
+  const provider = getProviderFromEnv()
 
   jobPoolCollect(provider)
+
+  jobCoinbaseCache()
 
   jobPairEventStartWork(provider)
   jobPairTransactionPurify(provider)

@@ -20,7 +20,7 @@ export type Pair = {
 }
 
 export class PoolService {
-  static _pairs: Pair[] = []
+  public static pairs: Pair[] = []
 
   private provider: Provider
   private factoryAddress: string
@@ -113,10 +113,6 @@ export class PoolService {
     }
   }
 
-  async pairs() {
-    return PoolService._pairs
-  }
-
   async collect() {
     const userAgent =
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36'
@@ -168,6 +164,6 @@ export class PoolService {
     }
 
     // Replace PoolService._pairs
-    PoolService._pairs = _pairs
+    PoolService.pairs = _pairs
   }
 }

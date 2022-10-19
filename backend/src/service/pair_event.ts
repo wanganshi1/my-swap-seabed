@@ -18,12 +18,11 @@ export class PairEventService {
   }
 
   async startWork() {
-    const pairs = await new PoolService(this.provider).pairs()
-    if (pairs.length < 1) {
+    if (PoolService.pairs.length < 1) {
       return
     }
 
-    await Promise.all(pairs.map((pair) => this.collect(pair)))
+    await Promise.all(PoolService.pairs.map((pair) => this.collect(pair)))
   }
 
   async collect(pair: Pair) {
