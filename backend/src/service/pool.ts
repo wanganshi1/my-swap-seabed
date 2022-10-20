@@ -7,6 +7,7 @@ import { toBN, toHex } from 'starknet/dist/utils/number'
 import { uint256ToBN } from 'starknet/dist/utils/uint256'
 import { contractConfig } from '../config'
 import { sleep } from '../util'
+import { StarkscanService } from './starkscan'
 
 export type Pair = {
   token0: { address: string; name: string; symbol: string; decimals: number }
@@ -29,22 +30,18 @@ export class PoolService {
 
   constructor(provider: Provider) {
     this.provider = provider
-    this.eventKey = getSelectorFromName('PairCreated')
+    this.eventKey = 'PairCreated'
 
     switch (this.provider.chainId) {
       case StarknetChainId.MAINNET:
         this.factoryAddress = contractConfig.addresses.mainnet.factory
-        this.axiosClient = axios.create({ baseURL: 'https://voyager.online' })
         break
       case StarknetChainId.TESTNET:
       default:
         this.factoryAddress = contractConfig.addresses.goerli.factory
-        this.axiosClient = axios.create({
-          baseURL: 'https://goerli.voyager.online',
-        })
         break
     }
-    axiosRetry(this.axiosClient, { retries: 3 })
+    this.axiosClient = new StarkscanService(provider).getAxiosClient()
   }
 
   private async contractCallWithRetry(
@@ -118,30 +115,37 @@ export class PoolService {
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36'
     const headers = { 'user-agent': userAgent }
 
-    const resp = await this.axiosClient.get(
-      `/api/events?contract=${this.factoryAddress}&ps=100&p=1`,
-      { headers }
-    )
+    const postData = {
+      operationName: 'events',
+      variables: {
+        input: {
+          from_address: this.factoryAddress,
+          sort_by: 'TIMESTAMP',
+          order_by: 'desc',
+        },
+        first: 100,
+      },
+      query:
+        'query events($first: Float, $last: Float, $before: String, $after: String, $input: EventsInput!) {\n  events(\n    first: $first\n    last: $last\n    before: $before\n    after: $after\n    input: $input\n  ) {\n    edges {\n      cursor\n      node {\n        id\n        block_hash\n        transaction_hash\n        event_index\n        from_address\n        keys\n        data\n        timestamp\n        key_name\n        __typename\n      }\n      __typename\n    }\n    pageInfo {\n      hasNextPage\n      __typename\n    }\n    __typename\n  }\n}',
+    }
 
-    const items = resp.data?.items
-    if (!items) {
+    const resp = await this.axiosClient.post('/graphql', postData, { headers })
+    const edges = resp.data?.data?.events?.edges
+    if (!edges || edges.length < 1) {
       return
     }
 
     const _pairs: Pair[] = []
-    for (const item of items) {
-      const eventResp = await this.axiosClient.get(`/api/event/${item.id}`, {
-        headers,
-      })
+    for (const item of edges) {
+      const { key_name, data } = item.node
 
-      // filter
-      if (!toBN(eventResp.data?.keys?.[0]).eq(toBN(this.eventKey))) {
+      if (key_name != this.eventKey && data.length == 4) {
         continue
       }
 
-      const token0 = number.toHex(toBN(eventResp.data.data[0]))
-      const token1 = number.toHex(toBN(eventResp.data.data[1]))
-      const pairAddress = number.toHex(toBN(eventResp.data.data[2]))
+      const token0 = number.toHex(toBN(data[0]))
+      const token1 = number.toHex(toBN(data[1]))
+      const pairAddress = number.toHex(toBN(data[2]))
 
       const [token0Info, token1Info, pairInfo] = await Promise.all([
         this.getErc20Info(token0),

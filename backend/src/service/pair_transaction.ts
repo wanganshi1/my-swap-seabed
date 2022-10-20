@@ -1,6 +1,5 @@
 import { AxiosInstance } from 'axios'
 import { Provider } from 'starknet'
-import { toBN, toHex } from 'starknet/dist/utils/number'
 import { uint256ToBN } from 'starknet/dist/utils/uint256'
 import { In, Repository } from 'typeorm'
 import { PairEvent } from '../model/pair_event'
@@ -109,19 +108,21 @@ export class PairTransactionService {
     const amount1Out = uint256ToBN({ low: eventData[7], high: eventData[8] })
 
     if (amount0In.gtn(0)) {
-      pairTransaction.token0_amount = toHex(amount0In)
-      pairTransaction.token1_amount = toHex(amount1Out)
+      pairTransaction.amount0 = amount0In.toString()
+      pairTransaction.amount1 = amount1Out.toString()
       pairTransaction.swap_reverse = 0
-      pairTransaction.fee = toHex(
-        amount0In.muln(TRANSACTION_FEE_RATIO).divn(1000)
-      )
+      pairTransaction.fee = amount0In
+        .muln(TRANSACTION_FEE_RATIO)
+        .divn(1000)
+        .toString()
     } else {
-      pairTransaction.token0_amount = toHex(amount0Out)
-      pairTransaction.token1_amount = toHex(amount1In)
+      pairTransaction.amount0 = amount0Out.toString()
+      pairTransaction.amount1 = amount1In.toString()
       pairTransaction.swap_reverse = 1
-      pairTransaction.fee = toHex(
-        amount1In.muln(TRANSACTION_FEE_RATIO).divn(1000)
-      )
+      pairTransaction.fee = amount1In
+        .muln(TRANSACTION_FEE_RATIO)
+        .divn(1000)
+        .toString()
     }
   }
 
@@ -138,8 +139,8 @@ export class PairTransactionService {
     const amount0 = uint256ToBN({ low: eventData[1], high: eventData[2] })
     const amount1 = uint256ToBN({ low: eventData[3], high: eventData[4] })
 
-    pairTransaction.token0_amount = toHex(amount0)
-    pairTransaction.token1_amount = toHex(amount1)
+    pairTransaction.amount0 = amount0.toString()
+    pairTransaction.amount1 = amount1.toString()
   }
 
   // Remove liquidity
@@ -155,8 +156,8 @@ export class PairTransactionService {
     const amount0 = uint256ToBN({ low: eventData[1], high: eventData[2] })
     const amount1 = uint256ToBN({ low: eventData[3], high: eventData[4] })
 
-    pairTransaction.token0_amount = toHex(amount0)
-    pairTransaction.token1_amount = toHex(amount1)
+    pairTransaction.amount0 = amount0.toString()
+    pairTransaction.amount1 = amount1.toString()
   }
 
   private async updateOrInsert(pairTransaction: PairTransaction) {

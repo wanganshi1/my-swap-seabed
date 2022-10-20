@@ -1,8 +1,10 @@
 import axios from 'axios'
 import axiosRetry from 'axios-retry'
+import { BigNumberish, FixedNumber } from 'ethers'
+import { formatUnits } from 'ethers/lib/utils'
 
 export class CoinbaseService {
-  public static usdRates: { [key: string]: string } = {}
+  public static usdRates: { [key: string]: string } | undefined = undefined
 
   async cache() {
     const url = 'https://api.coinbase.com/v2/exchange-rates?currency=USD'
@@ -19,8 +21,30 @@ export class CoinbaseService {
     }
   }
 
+  async exchangeToUsd(
+    amount: BigNumberish,
+    decimals: number,
+    currency: string
+  ) {
+    if (!CoinbaseService.usdRates) {
+      await this.cache()
+    }
+
+    currency = currency.toUpperCase()
+    if (!CoinbaseService.usdRates?.[currency]) {
+      return 0
+    }
+
+    const fnAmount = FixedNumber.from(formatUnits(amount, decimals))
+    const fnRate = FixedNumber.from(CoinbaseService.usdRates[currency])
+
+    return fnAmount.divUnsafe(fnRate).toUnsafeFloat()
+  }
+
   private fillTKA_TKB() {
-    CoinbaseService.usdRates['TKA'] = '1'
-    CoinbaseService.usdRates['TKB'] = '1'
+    if (CoinbaseService.usdRates) {
+      CoinbaseService.usdRates.TKA = '1'
+      CoinbaseService.usdRates.TKB = '1'
+    }
   }
 }

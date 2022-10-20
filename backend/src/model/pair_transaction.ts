@@ -2,6 +2,8 @@ import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm'
 import { CommonEntity } from './common'
 
 @Index(['event_id'])
+@Index(['event_time'])
+@Index(['key_name', 'event_time', 'pair_address', 'swap_reverse'])
 @Entity()
 export class PairTransaction extends CommonEntity {
   @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
@@ -26,10 +28,10 @@ export class PairTransaction extends CommonEntity {
   event_time: Date
 
   @Column('varchar', { length: 256, default: '' })
-  token0_amount: string
+  amount0: string
 
   @Column('varchar', { length: 256, default: '' })
-  token1_amount: string
+  amount1: string
 
   @Column('tinyint', { default: 0 })
   swap_reverse: number // 0: Swap token0 for token1, 1: Swap token1 for token0

@@ -2,7 +2,6 @@ import cluster from 'cluster'
 import Koa from 'koa'
 import koaBodyparser from 'koa-bodyparser'
 import cors from 'koa2-cors'
-import NodeCache from 'node-cache'
 import 'reflect-metadata'
 import semver from 'semver'
 import { createConnection } from 'typeorm'
@@ -63,9 +62,6 @@ const main = async () => {
         accessLogger.info(
           `process: ${process.pid}. Connect to the database succeed!`
         )
-
-        // memoryCache bind
-        Core.memoryCache = new NodeCache()
 
         // Break if connected
         break
