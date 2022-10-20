@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { utils } from 'ethers'
 import { toBN } from 'starknet/dist/utils/number'
 import { Repository } from 'typeorm'
@@ -5,6 +6,7 @@ import { PairTransaction } from '../model/pair_transaction'
 import { dateFormatNormal } from '../util'
 import { Core } from '../util/core'
 import { CoinbaseService } from './coinbase'
+import type { Pair } from './pool'
 import { PoolService } from './pool'
 
 export class AnalyticsService {
@@ -112,6 +114,31 @@ export class AnalyticsService {
     return { total: 0, profits }
   }
 
+  async getPairs(startTime: number, endTime: number, page = 1) {
+    // Currently not working
+    const limit = 100
+    page = page < 1 ? 1 : page
+
+    const [pairVolumes24Hour, pairVolumes7Day, pairSwapFees24Hour] =
+      await Promise.all([
+        this.getPairVolumes24Hour(),
+        this.getPairVolumes7Day(),
+        this.getPairSwapFees24Hour,
+      ])
+
+    const pairs: (Pair & {
+      liquidity: string
+      volume_24h: string
+      volume_7d: string
+      fees_24h: string
+      fees_total: string
+    })[] = []
+    for (const pair of PoolService.pairs) {
+    }
+
+    // return { total: 0, limit, page }
+  }
+
   private getTargetPair(pairAddress: string) {
     return PoolService.pairs.find((item) => item.pairAddress == pairAddress)
   }
@@ -138,5 +165,46 @@ export class AnalyticsService {
       swap_reverse: number
       sum_fee: number
     }>()
+  }
+
+  private async getPairSwapFees24Hour() {
+    const startTime = dayjs().subtract(24, 'hour').unix()
+    return this.getPairSwapFees(startTime, 0)
+  }
+
+  private async getPairVolumes(startTime: number, endTime: number) {
+    // QueryBuilder
+    const queryBuilder = this.repoPairTransaction.createQueryBuilder()
+    queryBuilder.select(
+      'pair_address, SUM(amount0) as sum_amount0, SUM(amount1) as sum_amount1'
+    )
+    queryBuilder.where('key_name = :key_name', { key_name: 'Swap' })
+    if (startTime > 0) {
+      queryBuilder.andWhere('event_time >= :startTimeFormat', {
+        startTimeFormat: dateFormatNormal(startTime * 1000),
+      })
+    }
+    if (endTime > 0) {
+      queryBuilder.andWhere('event_time <= :endTimeFormat', {
+        endTimeFormat: dateFormatNormal(endTime * 1000),
+      })
+    }
+    queryBuilder.addGroupBy('pair_address')
+
+    return await queryBuilder.getRawMany<{
+      pair_address: string
+      sum_amount0: number
+      sum_amount1: number
+    }>()
+  }
+
+  private async getPairVolumes24Hour() {
+    const startTime = dayjs().subtract(24, 'hour').unix()
+    return this.getPairVolumes(startTime, 0)
+  }
+
+  private async getPairVolumes7Day() {
+    const startTime = dayjs().subtract(7, 'day').unix()
+    return this.getPairVolumes(startTime, 0)
   }
 }

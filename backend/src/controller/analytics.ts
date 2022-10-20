@@ -2,17 +2,31 @@ import { plainToInstance } from 'class-transformer'
 import { Context, DefaultState } from 'koa'
 import KoaRouter from 'koa-router'
 import { AnalyticsService } from '../service/analytics'
-import { getProviderFromEnv } from '../util'
 
 export default function (router: KoaRouter<DefaultState, Context>) {
-  const provider = getProviderFromEnv()
+  const analyticsService = new AnalyticsService()
 
   router.get('analytics', async ({ restful }) => {
     restful.json([1])
   })
 
-  router.get('analytics/pairs', async ({ restful }) => {
-    restful.json([2])
+  router.get('analytics/pairs', async ({ restful, request }) => {
+    const params = plainToInstance(
+      class {
+        startTime: number
+        endTime: number
+        page: number
+      },
+      request.query
+    )
+
+    const pairs = await analyticsService.getPairs(
+      params.startTime,
+      params.endTime,
+      params.page
+    )
+
+    restful.json(pairs)
   })
 
   router.get('analytics/transactions', async ({ restful, request }) => {
@@ -24,8 +38,6 @@ export default function (router: KoaRouter<DefaultState, Context>) {
       },
       request.query
     )
-
-    const analyticsService = new AnalyticsService()
 
     const transactions = await analyticsService.getTransactions(
       params.startTime,
