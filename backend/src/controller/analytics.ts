@@ -34,6 +34,7 @@ export default function (router: KoaRouter<DefaultState, Context>) {
       class {
         startTime: number
         endTime: number
+        keyName: string
         page: number
       },
       request.query
@@ -42,6 +43,7 @@ export default function (router: KoaRouter<DefaultState, Context>) {
     const transactions = await analyticsService.getTransactions(
       params.startTime,
       params.endTime,
+      params.keyName,
       params.page
     )
 

@@ -16,12 +16,20 @@ export class AnalyticsService {
     this.repoPairTransaction = Core.db.getRepository(PairTransaction)
   }
 
-  async getTransactions(startTime: number, endTime: number, page = 1) {
+  async getTransactions(
+    startTime: number,
+    endTime: number,
+    keyName: string,
+    page = 1
+  ) {
     const limit = 10
     page = page < 1 ? 1 : page
 
     // QueryBuilder
     const queryBuilder = this.repoPairTransaction.createQueryBuilder()
+    if (keyName) {
+      queryBuilder.andWhere('key_name <= :keyName', { keyName })
+    }
     if (startTime > 0) {
       queryBuilder.andWhere('event_time >= :startTimeFormat', {
         startTimeFormat: dateFormatNormal(startTime * 1000),
