@@ -28,7 +28,7 @@ export class AnalyticsService {
     // QueryBuilder
     const queryBuilder = this.repoPairTransaction.createQueryBuilder()
     if (keyName) {
-      queryBuilder.andWhere('key_name <= :keyName', { keyName })
+      queryBuilder.andWhere('key_name = :keyName', { keyName })
     }
     if (startTime > 0) {
       queryBuilder.andWhere('event_time >= :startTimeFormat', {
