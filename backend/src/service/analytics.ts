@@ -1,5 +1,7 @@
 import dayjs from 'dayjs'
 import { utils } from 'ethers'
+import { open, write } from 'fs-extra'
+import path from 'path'
 import { BigNumberish, toBN } from 'starknet/dist/utils/number'
 import { Repository } from 'typeorm'
 import { PairTransaction } from '../model/pair_transaction'
@@ -15,6 +17,71 @@ export class AnalyticsService {
   constructor() {
     this.repoPairTransaction = Core.db.getRepository(PairTransaction)
   }
+
+  async getTVLsByDay() {
+    // QueryBuilder
+    const queryBuilder = this.repoPairTransaction.createQueryBuilder()
+    queryBuilder.select(
+      `DATE_FORMAT(event_time, '%Y-%m-%d') as event_time_day, pair_address, CONCAT(ROUND(SUM(amount0), 0), '') as sum_amount0, CONCAT(ROUND(SUM(amount1), 0), '') as sum_amount1, key_name`
+    ) // CONCAT ''. Prevent automatic conversion to scientific notation
+    queryBuilder.where('key_name IN (:...keynames)', {
+      keynames: ['Mint', 'Burn'],
+    })
+    queryBuilder
+      .addGroupBy('event_time_day')
+      .addGroupBy('pair_address')
+      .addGroupBy('key_name')
+    queryBuilder.addOrderBy('event_time_day', 'ASC')
+
+    const rawMany = await queryBuilder.getRawMany<{
+      event_time_day: string
+      pair_address: string
+      sum_amount0: string
+      sum_amount1: string
+      key_name: string
+    }>()
+
+    const tvls: { group: string; usd: number }[] = []
+    if (rawMany.length > 1) {
+      const startDay = dayjs(rawMany[0].event_time_day)
+      const endDay = dayjs(rawMany[rawMany.length - 1].event_time_day)
+
+      let tvl_usd = 0
+      for (let i = 0; ; i++) {
+        const currentDay = startDay.add(i, 'day')
+        if (currentDay.unix() > endDay.unix()) {
+          break
+        }
+
+        for (const item of rawMany) {
+          if (currentDay.unix() !== dayjs(item.event_time_day).unix()) {
+            continue
+          }
+
+          const targetPair = this.getTargetPair(item.pair_address)
+          if (!targetPair) {
+            continue
+          }
+
+          const _usd = await this.amount0AddAmount1ForUsd(
+            toBN(item.sum_amount0 + ''),
+            toBN(item.sum_amount1 + ''),
+            targetPair
+          )
+
+          // TODO: Excessive values may overflow
+          if (item.key_name === 'Mint') tvl_usd += _usd
+          if (item.key_name === 'Burn') tvl_usd -= _usd
+        }
+
+        tvls.push({ group: currentDay.format('YYYY-MM-DD'), usd: tvl_usd })
+      }
+    }
+
+    return tvls
+  }
+
+  async getVolumesByDay() {}
 
   async getTransactions(
     startTime: number,

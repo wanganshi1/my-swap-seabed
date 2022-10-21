@@ -7,7 +7,9 @@ export default function (router: KoaRouter<DefaultState, Context>) {
   const analyticsService = new AnalyticsService()
 
   router.get('analytics', async ({ restful }) => {
-    restful.json([1])
+    const tvls = await analyticsService.getTVLsByDay()
+
+    restful.json({ tvls })
   })
 
   router.get('analytics/pairs', async ({ restful, request }) => {

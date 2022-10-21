@@ -43,8 +43,9 @@ export class CoinbaseService {
 
   private fillTKA_TKB() {
     if (CoinbaseService.usdRates) {
-      CoinbaseService.usdRates.TKA = '1'
-      CoinbaseService.usdRates.TKB = '1'
+      // Rate from https://goerli.10kswap.com, Time: 2022-10-21 19:30
+      CoinbaseService.usdRates.TKA = '11322'
+      CoinbaseService.usdRates.TKB = '194516'
     }
   }
 }
