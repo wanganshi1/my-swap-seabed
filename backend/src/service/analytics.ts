@@ -1,6 +1,6 @@
 import dayjs from 'dayjs'
 import { utils } from 'ethers'
-import { toBN } from 'starknet/dist/utils/number'
+import { BigNumberish, toBN } from 'starknet/dist/utils/number'
 import { Repository } from 'typeorm'
 import { PairTransaction } from '../model/pair_transaction'
 import { dateFormatNormal } from '../util'
@@ -127,24 +127,94 @@ export class AnalyticsService {
     const limit = 100
     page = page < 1 ? 1 : page
 
-    const [pairVolumes24Hour, pairVolumes7Day, pairSwapFees24Hour] =
-      await Promise.all([
-        this.getPairVolumes24Hour(),
-        this.getPairVolumes7Day(),
-        this.getPairSwapFees24Hour,
-      ])
+    const [
+      pairVolumes24Hour,
+      pairVolumes7Day,
+      pairSwapFees24Hour,
+      pairSwapFeesTotal,
+    ] = await Promise.all([
+      this.getPairVolumes24Hour(),
+      this.getPairVolumes7Day(),
+      this.getPairSwapFees24Hour(),
+      this.getPairSwapFees(startTime, endTime),
+    ])
 
     const pairs: (Pair & {
-      liquidity: string
-      volume_24h: string
-      volume_7d: string
-      fees_24h: string
-      fees_total: string
+      liquidity: number
+      volume24h: number
+      volume7d: number
+      fees24h: number
+      feesTotal: number
     })[] = []
     for (const pair of PoolService.pairs) {
+      // Liquidity
+      const liquidity = await this.amount0AddAmount1ForUsd(
+        pair.reserve0,
+        pair.reserve1,
+        pair
+      )
+
+      // Volume(24h)
+      const pv24 = pairVolumes24Hour.find(
+        (item) => item.pair_address == pair.pairAddress
+      )
+      const volume24h = await this.amount0AddAmount1ForUsd(
+        pv24?.sum_amount0,
+        pv24?.sum_amount1,
+        pair
+      )
+
+      // Volume(7d)
+      const pv7d = pairVolumes7Day.find(
+        (item) => item.pair_address == pair.pairAddress
+      )
+      const volume7d = await this.amount0AddAmount1ForUsd(
+        pv7d?.sum_amount0,
+        pv7d?.sum_amount1,
+        pair
+      )
+
+      // fees(24h)
+      let f24Amount0 = 0,
+        f24Amount1 = 0
+      pairSwapFees24Hour.forEach((item) => {
+        if (pair.pairAddress == item.pair_address) {
+          if (item.swap_reverse == 0) f24Amount0 += item.sum_fee
+          if (item.swap_reverse == 1) f24Amount1 += item.sum_fee
+        }
+      })
+      const fees24h = await this.amount0AddAmount1ForUsd(
+        f24Amount0,
+        f24Amount1,
+        pair
+      )
+
+      // fees(total)
+      let fTotalAmount0 = 0,
+        fTotalAmount1 = 0
+      pairSwapFeesTotal.forEach((item) => {
+        if (pair.pairAddress == item.pair_address) {
+          if (item.swap_reverse == 0) fTotalAmount0 += item.sum_fee
+          if (item.swap_reverse == 1) fTotalAmount1 += item.sum_fee
+        }
+      })
+      const feesTotal = await this.amount0AddAmount1ForUsd(
+        fTotalAmount0,
+        fTotalAmount1,
+        pair
+      )
+
+      pairs.push({
+        ...pair,
+        liquidity,
+        volume24h,
+        volume7d,
+        fees24h,
+        feesTotal,
+      })
     }
 
-    // return { total: 0, limit, page }
+    return { pairs, total: 0, limit, page }
   }
 
   private getTargetPair(pairAddress: string) {
@@ -214,5 +284,30 @@ export class AnalyticsService {
   private async getPairVolumes7Day() {
     const startTime = dayjs().subtract(7, 'day').unix()
     return this.getPairVolumes(startTime, 0)
+  }
+
+  private async amount0AddAmount1ForUsd(
+    amount0: BigNumberish | undefined,
+    amount1: BigNumberish | undefined,
+    pair: Pair
+  ) {
+    const coinbaseService = new CoinbaseService()
+    let amount0Usd = 0,
+      amount1Usd = 0
+    if (amount0) {
+      amount0Usd = await coinbaseService.exchangeToUsd(
+        amount0 + '',
+        pair.token0.decimals,
+        pair.token0.symbol
+      )
+    }
+    if (amount1) {
+      amount1Usd = await coinbaseService.exchangeToUsd(
+        amount1 + '',
+        pair.token1.decimals,
+        pair.token1.symbol
+      )
+    }
+    return amount0Usd + amount1Usd
   }
 }
