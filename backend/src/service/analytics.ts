@@ -41,20 +41,20 @@ export class AnalyticsService {
       key_name: string
     }>()
 
-    const tvls: { group: string; usd: number }[] = []
+    const tvls: { date: string; tvl: number }[] = []
     if (rawMany.length > 1) {
       const startDay = dayjs(rawMany[0].event_time_day)
       const endDay = dayjs(rawMany[rawMany.length - 1].event_time_day)
 
       let tvl_usd = 0
       for (let i = 0; ; i++) {
-        const currentDay = startDay.add(i, 'day')
-        if (currentDay.unix() > endDay.unix()) {
+        const currentDate = startDay.add(i, 'day')
+        if (currentDate.unix() > endDay.unix()) {
           break
         }
 
         for (const item of rawMany) {
-          if (currentDay.unix() !== dayjs(item.event_time_day).unix()) {
+          if (currentDate.unix() !== dayjs(item.event_time_day).unix()) {
             continue
           }
 
@@ -64,8 +64,8 @@ export class AnalyticsService {
           }
 
           const _usd = await this.amount0AddAmount1ForUsd(
-            toBN(item.sum_amount0 + ''),
-            toBN(item.sum_amount1 + ''),
+            item.sum_amount0,
+            item.sum_amount1,
             targetPair
           )
 
@@ -74,14 +74,74 @@ export class AnalyticsService {
           if (item.key_name === 'Burn') tvl_usd -= _usd
         }
 
-        tvls.push({ group: currentDay.format('YYYY-MM-DD'), usd: tvl_usd })
+        tvls.push({ date: currentDate.format('YYYY-MM-DD'), tvl: tvl_usd })
       }
     }
 
     return tvls
   }
 
-  async getVolumesByDay() {}
+  async getVolumesByDay() {
+    // QueryBuilder
+    const queryBuilder = this.repoPairTransaction.createQueryBuilder()
+    queryBuilder.select(
+      `DATE_FORMAT(event_time, '%Y-%m-%d') as event_time_day, pair_address, CONCAT(ROUND(SUM(amount0), 0), '') as sum_amount0, CONCAT(ROUND(SUM(amount1), 0), '') as sum_amount1, swap_reverse`
+    ) // CONCAT ''. Prevent automatic conversion to scientific notation
+    queryBuilder.where('key_name = :keyname', { keyname: 'Swap' })
+    queryBuilder
+      .addGroupBy('event_time_day')
+      .addGroupBy('pair_address')
+      .addGroupBy('swap_reverse')
+    queryBuilder.addOrderBy('event_time_day', 'ASC')
+
+    const rawMany = await queryBuilder.getRawMany<{
+      event_time_day: string
+      pair_address: string
+      sum_amount0: string
+      sum_amount1: string
+      swap_reverse: number
+    }>()
+
+    const volumes: { date: string; volume: number }[] = []
+    if (rawMany.length > 1) {
+      const startDay = dayjs(rawMany[0].event_time_day)
+      const endDay = dayjs(rawMany[rawMany.length - 1].event_time_day)
+
+      for (let i = 0; ; i++) {
+        const currentDate = startDay.add(i, 'day')
+        if (currentDate.unix() > endDay.unix()) {
+          break
+        }
+
+        let volume_usd = 0
+        for (const item of rawMany) {
+          if (currentDate.unix() !== dayjs(item.event_time_day).unix()) {
+            continue
+          }
+
+          const targetPair = this.getTargetPair(item.pair_address)
+          if (!targetPair) {
+            continue
+          }
+
+          // TODO: Excessive values may overflow
+          volume_usd += await this.getPairVolumeForUsd(
+            item.sum_amount0,
+            item.sum_amount1,
+            targetPair,
+            item.swap_reverse
+          )
+        }
+
+        volumes.push({
+          date: currentDate.format('YYYY-MM-DD'),
+          volume: volume_usd,
+        })
+      }
+    }
+
+    return volumes
+  }
 
   async getTransactions(
     startTime: number,
@@ -222,24 +282,30 @@ export class AnalyticsService {
       )
 
       // Volume(24h)
-      const pv24 = pairVolumes24Hour.find(
-        (item) => item.pair_address == pair.pairAddress
-      )
-      const volume24h = await this.amount0AddAmount1ForUsd(
-        pv24?.sum_amount0,
-        pv24?.sum_amount1,
-        pair
-      )
+      let volume24h = 0
+      for (const pv24h of pairVolumes24Hour) {
+        if (pv24h.pair_address == pair.pairAddress) {
+          volume24h += await this.getPairVolumeForUsd(
+            pv24h.sum_amount0,
+            pv24h.sum_amount1,
+            pair,
+            pv24h.swap_reverse
+          )
+        }
+      }
 
       // Volume(7d)
-      const pv7d = pairVolumes7Day.find(
-        (item) => item.pair_address == pair.pairAddress
-      )
-      const volume7d = await this.amount0AddAmount1ForUsd(
-        pv7d?.sum_amount0,
-        pv7d?.sum_amount1,
-        pair
-      )
+      let volume7d = 0
+      for (const pv7d of pairVolumes7Day) {
+        if (pv7d.pair_address == pair.pairAddress) {
+          volume7d += await this.getPairVolumeForUsd(
+            pv7d.sum_amount0,
+            pv7d.sum_amount1,
+            pair,
+            pv7d.swap_reverse
+          )
+        }
+      }
 
       // fees(24h)
       let f24Amount0 = 0,
@@ -291,7 +357,9 @@ export class AnalyticsService {
   private async getPairSwapFees(startTime: number, endTime: number) {
     // QueryBuilder
     const queryBuilder = this.repoPairTransaction.createQueryBuilder()
-    queryBuilder.select('pair_address, swap_reverse, SUM(fee) as sum_fee')
+    queryBuilder.select(
+      `pair_address, swap_reverse, CONCAT(ROUND(SUM(fee), 0), '') as sum_fee`
+    )
     queryBuilder.where('key_name = :key_name', { key_name: 'Swap' })
     if (startTime > 0) {
       queryBuilder.andWhere('event_time >= :startTimeFormat', {
@@ -321,7 +389,7 @@ export class AnalyticsService {
     // QueryBuilder
     const queryBuilder = this.repoPairTransaction.createQueryBuilder()
     queryBuilder.select(
-      'pair_address, SUM(amount0) as sum_amount0, SUM(amount1) as sum_amount1'
+      `pair_address, CONCAT(ROUND(SUM(amount0), 0), '') as sum_amount0, CONCAT(ROUND(SUM(amount1), 0), '') as sum_amount1, swap_reverse`
     )
     queryBuilder.where('key_name = :key_name', { key_name: 'Swap' })
     if (startTime > 0) {
@@ -334,12 +402,13 @@ export class AnalyticsService {
         endTimeFormat: dateFormatNormal(endTime * 1000),
       })
     }
-    queryBuilder.addGroupBy('pair_address')
+    queryBuilder.addGroupBy('pair_address').addGroupBy('swap_reverse')
 
     return await queryBuilder.getRawMany<{
       pair_address: string
-      sum_amount0: number
-      sum_amount1: number
+      sum_amount0: string
+      sum_amount1: string
+      swap_reverse: number
     }>()
   }
 
@@ -351,6 +420,21 @@ export class AnalyticsService {
   private async getPairVolumes7Day() {
     const startTime = dayjs().subtract(7, 'day').unix()
     return this.getPairVolumes(startTime, 0)
+  }
+
+  private async getPairVolumeForUsd(
+    amount0: BigNumberish | undefined,
+    amount1: BigNumberish | undefined,
+    pair: Pair,
+    swap_reverse: number
+  ) {
+    if (swap_reverse == 0)
+      return await this.amount0AddAmount1ForUsd(amount0, 0, pair)
+
+    if (swap_reverse == 1)
+      return await this.amount0AddAmount1ForUsd(0, amount1, pair)
+
+    return 0
   }
 
   private async amount0AddAmount1ForUsd(

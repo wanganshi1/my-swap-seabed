@@ -8,8 +8,9 @@ export default function (router: KoaRouter<DefaultState, Context>) {
 
   router.get('analytics', async ({ restful }) => {
     const tvls = await analyticsService.getTVLsByDay()
+    const volumes = await analyticsService.getVolumesByDay()
 
-    restful.json({ tvls })
+    restful.json({ tvls, volumes })
   })
 
   router.get('analytics/pairs', async ({ restful, request }) => {
