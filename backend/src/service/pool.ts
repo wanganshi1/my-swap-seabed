@@ -1,12 +1,11 @@
-import axios, { AxiosInstance } from 'axios'
-import axiosRetry from 'axios-retry'
+import { AxiosInstance } from 'axios'
 import { AsyncContractFunction, Contract, number, Provider } from 'starknet'
 import { StarknetChainId } from 'starknet/dist/constants'
-import { getSelectorFromName } from 'starknet/dist/utils/hash'
 import { toBN, toHex } from 'starknet/dist/utils/number'
 import { uint256ToBN } from 'starknet/dist/utils/uint256'
 import { contractConfig } from '../config'
 import { sleep } from '../util'
+import { CoinbaseService } from './coinbase'
 import { StarkscanService } from './starkscan'
 
 export type Pair = {
@@ -17,6 +16,7 @@ export type Pair = {
   reserve0: string // hex
   reserve1: string // hex
   totalSupply: string // hex
+  liquidity: number // reserve0 + reserve1 for usd
   APR: string
 }
 
@@ -158,11 +158,24 @@ export class PoolService {
         0
       )
 
+      const coinbaseService = new CoinbaseService()
+      const liquidity0 = await coinbaseService.exchangeToUsd(
+        pairInfo.reserve0,
+        token0Info.decimals,
+        token0Info.symbol
+      )
+      const liquidity1 = await coinbaseService.exchangeToUsd(
+        pairInfo.reserve1,
+        token1Info.decimals,
+        token1Info.symbol
+      )
+
       _pairs.push({
         token0: { address: token0, ...token0Info },
         token1: { address: token1, ...token1Info },
         pairAddress: pairAddress,
         ...pairInfo,
+        liquidity: liquidity0 + liquidity1,
         APR,
       })
     }

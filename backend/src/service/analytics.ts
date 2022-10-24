@@ -274,13 +274,6 @@ export class AnalyticsService {
       feesTotal: number
     })[] = []
     for (const pair of PoolService.pairs) {
-      // Liquidity
-      const liquidity = await this.amount0AddAmount1ForUsd(
-        pair.reserve0,
-        pair.reserve1,
-        pair
-      )
-
       // Volume(24h)
       let volume24h = 0
       for (const pv24h of pairVolumes24Hour) {
@@ -339,7 +332,6 @@ export class AnalyticsService {
 
       pairs.push({
         ...pair,
-        liquidity,
         volume24h,
         volume7d,
         fees24h,
