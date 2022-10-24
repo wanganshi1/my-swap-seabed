@@ -22,6 +22,9 @@ services:
       PRODUCT_ENV: '${PRODUCT_ENV}'
       FAUCET_PRIVATE_KEYS: '${FAUCET_PRIVATE_KEYS}' # split with symbol: ,
       FAUCET_ACCOUNTS: '${FAUCET_ACCOUNTS}' # split with symbol: ,
+      ESTIMATED_FEES_ACCOUNT: '${ESTIMATED_FEES_ACCOUNT}'
+      ESTIMATED_FEES_PRIVATE_KEY: '${ESTIMATED_FEES_PRIVATE_KEY}'
+      ESTIMATED_FEES_PAIR: '${ESTIMATED_FEES_PAIR}'
     volumes:
       - './backend/logs:/app/logs'
     #   - './backend:/app'

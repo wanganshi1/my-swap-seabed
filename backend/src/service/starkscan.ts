@@ -10,16 +10,12 @@ export class StarkscanService {
   constructor(provider: Provider) {
     this.provider = provider
 
-    switch (this.provider.chainId) {
-      case StarknetChainId.MAINNET:
-        this.axiosClient = axios.create({ baseURL: 'https://api.starkscan.co' })
-        break
-      case StarknetChainId.TESTNET:
-      default:
-        this.axiosClient = axios.create({
-          baseURL: 'https://api-testnet.starkscan.co',
-        })
-        break
+    if (this.provider.chainId === StarknetChainId.MAINNET) {
+      this.axiosClient = axios.create({ baseURL: 'https://api.starkscan.co' })
+    } else {
+      this.axiosClient = axios.create({
+        baseURL: 'https://api-testnet.starkscan.co',
+      })
     }
     axiosRetry(this.axiosClient, { retries: 3 })
   }
