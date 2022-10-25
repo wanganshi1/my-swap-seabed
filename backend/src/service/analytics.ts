@@ -1,7 +1,5 @@
 import dayjs from 'dayjs'
 import { utils } from 'ethers'
-import { open, write } from 'fs-extra'
-import path from 'path'
 import { BigNumberish, toBN } from 'starknet/dist/utils/number'
 import { Repository } from 'typeorm'
 import { PairTransaction } from '../model/pair_transaction'
@@ -246,7 +244,21 @@ export class AnalyticsService {
       }
     }
 
-    return { total: 0, profits }
+    // QueryBuilder
+    const queryBuilder = this.repoPairTransaction.createQueryBuilder()
+    if (startTime > 0) {
+      queryBuilder.andWhere('event_time >= :startTimeFormat', {
+        startTimeFormat: dateFormatNormal(startTime * 1000),
+      })
+    }
+    if (endTime > 0) {
+      queryBuilder.andWhere('event_time <= :endTimeFormat', {
+        endTimeFormat: dateFormatNormal(endTime * 1000),
+      })
+    }
+    const total = await queryBuilder.getCount()
+
+    return { total, profits }
   }
 
   async getPairs(startTime: number, endTime: number, page = 1) {

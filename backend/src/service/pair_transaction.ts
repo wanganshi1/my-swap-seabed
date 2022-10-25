@@ -88,8 +88,17 @@ export class PairTransactionService {
     }
 
     const resp = await this.axiosClient.post('/graphql', postData, { headers })
+    const contract_address = (resp.data?.data?.transaction?.contract_address ||
+      '') as string
+    if (!contract_address) {
+      errorLogger.error(
+        `Response miss contract_address. transaction_hash: ${
+          pairEvent.transaction_hash
+        }. Response: ${JSON.stringify(resp)}`
+      )
+    }
 
-    return (resp.data?.data?.transaction?.contract_address || '') as string
+    return contract_address
   }
 
   // Swap

@@ -55,9 +55,6 @@ export default function (router: KoaRouter<DefaultState, Context>) {
       params.endTime
     )
 
-    // Currently the two values are the same
-    summary.total = transactions.total
-
     restful.json({ transactions, summary })
   })
 }
