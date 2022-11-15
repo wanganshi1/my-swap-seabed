@@ -7,6 +7,8 @@ import { Pair, PoolService } from './pool'
 import { StarkscanService } from './starkscan'
 
 export class PairEventService {
+  private static pairCursors: { [key: string]: string } = {}
+
   private provider: Provider
   private axiosClient: AxiosInstance
   private repoPairEvent: Repository<PairEvent>
@@ -55,6 +57,11 @@ export class PairEventService {
 
     const saveWhenNoExist = async (edge: any) => {
       const { cursor, node } = edge
+
+      if (cursor) {
+        PairEventService.pairCursors[pair.pairAddress] = cursor
+      }
+
       if (!node.id) {
         return
       }
@@ -82,6 +89,10 @@ export class PairEventService {
   }
 
   private async getAfterCursor(pair: Pair) {
+    if (PairEventService.pairCursors[pair.pairAddress]) {
+      return PairEventService.pairCursors[pair.pairAddress]
+    }
+
     const pairEvent = await this.repoPairEvent.findOne({
       select: ['cursor'],
       where: { pair_address: pair.pairAddress },
