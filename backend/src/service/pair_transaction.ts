@@ -4,6 +4,7 @@ import { uint256ToBN } from 'starknet/dist/utils/uint256'
 import { In, Repository } from 'typeorm'
 import { PairEvent } from '../model/pair_event'
 import { PairTransaction } from '../model/pair_transaction'
+import { sleep } from '../util'
 import { Core } from '../util/core'
 import { errorLogger } from '../util/logger'
 import { StarkscanService } from './starkscan'
@@ -24,13 +25,25 @@ export class PairTransactionService {
   }
 
   async purify() {
+    // Multiple execution(Will 403 error occurred)
+    // const pairEvents = await this.repoPairEvent.find({
+    //   where: { key_name: In(['Swap', 'Mint', 'Burn']), status: In([0, 2]) },
+    //   order: { event_time: 'ASC' },
+    //   take: 20,
+    // })
+
+    // await Promise.all(pairEvents.map(this.purifyOne.bind(this)))
+
+    // Single execution
     const pairEvents = await this.repoPairEvent.find({
       where: { key_name: In(['Swap', 'Mint', 'Burn']), status: In([0, 2]) },
       order: { event_time: 'ASC' },
-      take: 20,
+      take: 200,
     })
-
-    await Promise.all(pairEvents.map(this.purifyOne.bind(this)))
+    for (const item of pairEvents) {
+      await this.purifyOne(item)
+      await sleep(300)
+    }
   }
 
   private async purifyOne(pairEvent: PairEvent) {
