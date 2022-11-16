@@ -1,3 +1,4 @@
+import { PromisePool } from '@supercharge/promise-pool'
 import { AxiosInstance } from 'axios'
 import { Provider } from 'starknet'
 import { uint256ToBN } from 'starknet/dist/utils/uint256'
@@ -25,25 +26,15 @@ export class PairTransactionService {
   }
 
   async purify() {
-    // Multiple execution(Will 403 error occurred)
-    // const pairEvents = await this.repoPairEvent.find({
-    //   where: { key_name: In(['Swap', 'Mint', 'Burn']), status: In([0, 2]) },
-    //   order: { event_time: 'ASC' },
-    //   take: 20,
-    // })
-
-    // await Promise.all(pairEvents.map(this.purifyOne.bind(this)))
-
-    // Single execution
     const pairEvents = await this.repoPairEvent.find({
       where: { key_name: In(['Swap', 'Mint', 'Burn']), status: In([0, 2]) },
       order: { event_time: 'ASC' },
       take: 200,
     })
-    for (const item of pairEvents) {
-      await this.purifyOne(item)
-      await sleep(300)
-    }
+
+    await PromisePool.withConcurrency(20)
+      .for(pairEvents)
+      .process(this.purifyOne.bind(this))
   }
 
   private async purifyOne(pairEvent: PairEvent) {
