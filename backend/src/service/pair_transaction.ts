@@ -32,7 +32,7 @@ export class PairTransactionService {
       take: 200,
     })
 
-    await PromisePool.withConcurrency(20)
+    await PromisePool.withConcurrency(2)
       .for(pairEvents)
       .process(this.purifyOne.bind(this))
   }
