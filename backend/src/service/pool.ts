@@ -5,6 +5,7 @@ import { toBN, toHex } from 'starknet/dist/utils/number'
 import { uint256ToBN } from 'starknet/dist/utils/uint256'
 import { contractConfig } from '../config'
 import { sleep } from '../util'
+import { errorLogger } from '../util/logger'
 import { CoinbaseService } from './coinbase'
 import { StarkscanService } from './starkscan'
 
@@ -18,6 +19,7 @@ export type Pair = {
   totalSupply: string // hex
   liquidity: number // reserve0 + reserve1 for usd
   APR: string
+  lastUpdatedTime?: string
 }
 
 export class PoolService {
@@ -132,6 +134,7 @@ export class PoolService {
     const resp = await this.axiosClient.post('/graphql', postData, { headers })
     const edges = resp.data?.data?.events?.edges
     if (!edges || edges.length < 1) {
+      errorLogger.error('Get factory events failed')
       return
     }
 
@@ -177,6 +180,7 @@ export class PoolService {
         ...pairInfo,
         liquidity: liquidity0 + liquidity1,
         APR,
+        lastUpdatedTime: new Date().toISOString()
       })
     }
 
