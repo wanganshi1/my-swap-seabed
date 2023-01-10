@@ -142,7 +142,7 @@ export class PoolService {
     for (const item of edges) {
       const { key_name, data } = item.node
 
-      if (key_name != this.eventKey && data.length == 4) {
+      if (key_name != this.eventKey || data.length != 4) {
         continue
       }
 
@@ -180,7 +180,7 @@ export class PoolService {
         ...pairInfo,
         liquidity: liquidity0 + liquidity1,
         APR,
-        lastUpdatedTime: new Date().toISOString()
+        lastUpdatedTime: new Date().toISOString(),
       })
     }
 
