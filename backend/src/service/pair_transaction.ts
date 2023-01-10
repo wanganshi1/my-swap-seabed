@@ -47,7 +47,8 @@ export class PairTransactionService {
       pairTransaction.event_time = pairEvent.event_time
 
       // Account address
-      pairTransaction.account_address = await this.getAccountAddress(pairEvent)
+      // pairTransaction.account_address = await this.getAccountAddress(pairEvent)
+      pairTransaction.account_address = ''
 
       switch (pairEvent.key_name) {
         case 'Swap':

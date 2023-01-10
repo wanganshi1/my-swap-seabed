@@ -101,14 +101,14 @@ export class PoolService {
       await Promise.all([
         this.contractCallWithRetry(contract.totalSupply),
         this.contractCallWithRetry(contract.decimals),
-        this.contractCallWithRetry(contract.getReserves),
+        this.contractCallWithRetry(contract.get_reserves),
       ])
 
     return {
       totalSupply: toHex(uint256ToBN(totalSupply)),
       decimals: toBN(decimals).toNumber(),
-      reserve0: toHex(reserve0),
-      reserve1: toHex(reserve1),
+      reserve0: toHex(uint256ToBN(reserve0)),
+      reserve1: toHex(uint256ToBN(reserve1)),
     }
   }
 
@@ -142,7 +142,7 @@ export class PoolService {
     for (const item of edges) {
       const { key_name, data } = item.node
 
-      if (key_name != this.eventKey && data.length == 4) {
+      if (key_name != this.eventKey || data.length != 4) {
         continue
       }
 
@@ -180,7 +180,7 @@ export class PoolService {
         ...pairInfo,
         liquidity: liquidity0 + liquidity1,
         APR,
-        lastUpdatedTime: new Date().toISOString()
+        lastUpdatedTime: new Date().toISOString(),
       })
     }
 
