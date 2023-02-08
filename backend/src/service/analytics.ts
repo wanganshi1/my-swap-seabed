@@ -1,5 +1,5 @@
 import dayjs from 'dayjs'
-import { utils } from 'ethers'
+import { BigNumber, utils } from 'ethers'
 import { BigNumberish, toBN } from 'starknet/dist/utils/number'
 import { Repository } from 'typeorm'
 import { PairTransaction } from '../model/pair_transaction'
@@ -352,6 +352,64 @@ export class AnalyticsService {
     }
 
     return { pairs, total: 0, limit, page }
+  }
+
+  async getTVLsByAccount(count = 100) {
+    // QueryBuilder
+    const queryBuilder = this.repoPairTransaction.createQueryBuilder()
+    queryBuilder.select(
+      `account_address, pair_address, CONCAT(ROUND(SUM(amount0), 0), '') as sum_amount0, CONCAT(ROUND(SUM(amount1), 0), '') as sum_amount1, key_name`
+    ) // CONCAT ''. Prevent automatic conversion to scientific notation
+    queryBuilder.where('key_name IN (:...keynames)', {
+      keynames: ['Mint', 'Burn'],
+    })
+    queryBuilder
+      .addGroupBy('account_address')
+      .addGroupBy('pair_address')
+      .addGroupBy('key_name')
+
+    const rawMany = await queryBuilder.getRawMany<{
+      account_address: string
+      pair_address: string
+      sum_amount0: string
+      sum_amount1: string
+      key_name: string
+    }>()
+
+    const tvls: { account_address: string; tvl: number }[] = []
+    if (rawMany.length > 1) {
+      const tvlAccountMap: { [key: string]: number } = {}
+
+      for (const item of rawMany) {
+        const targetPair = this.getTargetPair(item.pair_address)
+        if (!targetPair) {
+          continue
+        }
+
+        const _usd = await this.amount0AddAmount1ForUsd(
+          item.sum_amount0,
+          item.sum_amount1,
+          targetPair
+        )
+
+        // TODO: Excessive values may overflow
+        let tvl_usd = 0
+        if (item.key_name === 'Mint') tvl_usd += _usd
+        if (item.key_name === 'Burn') tvl_usd -= _usd
+
+        if (tvlAccountMap[item.account_address]) {
+          tvlAccountMap[item.account_address] += _usd
+        } else {
+          tvlAccountMap[item.account_address] = _usd
+        }
+      }
+
+      for (const key in tvlAccountMap) {
+        tvls.push({ account_address: key, tvl: tvlAccountMap[key] })
+      }
+    }
+
+    return tvls.sort((a, b) => b.tvl - a.tvl).slice(0, count)
   }
 
   private getTargetPair(pairAddress: string) {
