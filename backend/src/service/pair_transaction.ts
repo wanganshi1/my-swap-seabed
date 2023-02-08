@@ -47,7 +47,7 @@ export class PairTransactionService {
       pairTransaction.event_time = pairEvent.event_time
 
       // Account address
-      // pairTransaction.account_address = await this.getAccountAddress(pairEvent)
+      // pairTransaction.account_address = await this.getAccountAddress(pairEvent.transaction_hash)
       pairTransaction.account_address = ''
 
       switch (pairEvent.key_name) {
@@ -76,7 +76,39 @@ export class PairTransactionService {
     }
   }
 
-  private async getAccountAddress(pairEvent: PairEvent) {
+  async purifyAccountAddress() {
+    const pairTransactions = await this.repoPairTransaction.find({
+      where: { account_address: '' },
+      order: { event_time: 'ASC' },
+      select: ['id', 'transaction_hash'],
+      take: 200,
+    })
+
+    const updateAccount = async (pairTransaction: PairTransaction) => {
+      try {
+        const accountAddress = await this.getAccountAddress(
+          pairTransaction.transaction_hash
+        )
+
+        await this.repoPairTransaction.update(pairTransaction.id, {
+          account_address: accountAddress,
+        })
+      } catch (err) {
+        errorLogger.error(
+          'PurifyAccountAddress failed:',
+          err.message,
+          ', transaction_hash:',
+          pairTransaction.transaction_hash
+        )
+      }
+    }
+
+    await PromisePool.withConcurrency(2)
+      .for(pairTransactions)
+      .process(updateAccount.bind(this))
+  }
+
+  private async getAccountAddress(transaction_hash: string) {
     const userAgent =
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36'
     const headers = { 'user-agent': userAgent }
@@ -85,7 +117,7 @@ export class PairTransactionService {
       operationName: 'transaction',
       variables: {
         input: {
-          transaction_hash: pairEvent.transaction_hash,
+          transaction_hash,
         },
       },
       query:
@@ -97,9 +129,9 @@ export class PairTransactionService {
       '') as string
     if (!contract_address) {
       errorLogger.error(
-        `Response miss contract_address. transaction_hash: ${
-          pairEvent.transaction_hash
-        }. Response: ${JSON.stringify(resp)}`
+        `Response miss contract_address. transaction_hash: ${transaction_hash}. Response: ${JSON.stringify(
+          resp
+        )}`
       )
     }
 
