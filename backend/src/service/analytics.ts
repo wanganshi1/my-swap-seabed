@@ -376,9 +376,15 @@ export class AnalyticsService {
       key_name: string
     }>()
 
-    const tvls: { account_address: string; tvl: number }[] = []
+    const tvls: {
+      account_address: string
+      tvlTotal: number
+      tvlPairs: { [key: string]: number }
+    }[] = []
     if (rawMany.length > 1) {
-      const tvlAccountMap: { [key: string]: number } = {}
+      const tvlAccountMap: {
+        [key: string]: { [key: string]: number }
+      } = {}
 
       for (const item of rawMany) {
         const targetPair = this.getTargetPair(item.pair_address)
@@ -397,19 +403,26 @@ export class AnalyticsService {
         if (item.key_name === 'Mint') tvl_usd += _usd
         if (item.key_name === 'Burn') tvl_usd -= _usd
 
-        if (tvlAccountMap[item.account_address]) {
-          tvlAccountMap[item.account_address] += _usd
-        } else {
-          tvlAccountMap[item.account_address] = _usd
-        }
+        const target = tvlAccountMap[item.account_address] || {}
+        if (!target[item.pair_address]) target[item.pair_address] = 0
+
+        target[item.pair_address] += tvl_usd
+        tvlAccountMap[item.account_address] = target
       }
 
       for (const key in tvlAccountMap) {
-        tvls.push({ account_address: key, tvl: tvlAccountMap[key] })
+        const tvlPairs = tvlAccountMap[key]
+
+        let tvlTotal = 0
+        for (const key1 in tvlPairs) {
+          tvlTotal += tvlPairs[key1]
+        }
+
+        tvls.push({ account_address: key, tvlTotal, tvlPairs })
       }
     }
 
-    return tvls.sort((a, b) => b.tvl - a.tvl).slice(0, count)
+    return tvls.sort((a, b) => b.tvlTotal - a.tvlTotal).slice(0, count)
   }
 
   private getTargetPair(pairAddress: string) {
