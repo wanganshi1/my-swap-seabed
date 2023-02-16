@@ -57,4 +57,10 @@ export default function (router: KoaRouter<DefaultState, Context>) {
 
     restful.json({ transactions, summary })
   })
+
+  router.get('analytics/top_tvl_accounts', async ({ restful }) => {
+    const tvls = await analyticsService.getTVLsByAccount()
+
+    restful.json({ tvls })
+  })
 }

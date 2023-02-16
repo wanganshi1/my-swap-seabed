@@ -1,6 +1,7 @@
 logs/
 npm-debug.log
 yarn-error.log
+.yarn
 node_modules/
 coverage/
 .idea/
